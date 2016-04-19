@@ -100,8 +100,7 @@ find_atom_in_axioms(Name,H):-
    ;
     (
       ( Name:propertyAssertion(A,B,C) ; Name:annotationAssertion(A,B,C) ; Name:exactCardinality(A,B,C) ;
-        Name:maxCardinality(A,B,C) ; Name:minCardinality(A,B,C)
-      ),
+        Name:maxCardinality(A,B,C) ; Name:minCardinality(A,B,C)      ),
       L=[A,B,C]
     )
    ;
@@ -147,7 +146,7 @@ instanceOf(Class,Ind,Expl):-
 	add(ABox,(classAssertion(complementOf(Class),Ind),[]),ABox0),
 	%findall((ABox1,Tabs1),apply_rules_0((ABox0,Tabs),(ABox1,Tabs1)),L),
 	findall((ABox1,Tabs1),apply_all_rules((ABox0,Tabs),(ABox1,Tabs1)),L),
-  	find_expls(L,Expl),
+	find_expls(L,Expl),
 	dif(Expl,[])
     ;
 	Expl = ["IRIs not existent"],!
@@ -158,7 +157,7 @@ instanceOf(_,_,_):-
 
 instanceOf(Class,Ind):-
   (  check_query_args([Class,Ind]) *->
-	(  
+	(
 	  retractall(exp_found(_)),
 	  retractall(ind(_)),
 	  assert(ind(1)),
@@ -287,7 +286,7 @@ not_already_found([],_E):-!.
 not_already_found([H|_T],E):-
   subset(H,E),!,
   fail.
-  
+
 not_already_found([H|_T],E):-
   subset(E,H),!,
   retract(exp_found(H)).
@@ -319,9 +318,10 @@ find_clash((ABox0,Tabs0),Expl2):-
 
 findClassAssertion(C,Ind,Expl1,ABox,classAssertion):-
 	find((classAssertion(C,Ind),Expl1),ABox).
-findClassAssertion(C,Ind,Expl1,ABox,lpClassAssertion):-
-	find((lpClassAssertion(C,Ind),Expl1),ABox).
-
+findClassAssertion(C,Ind,[lpClassAssertion(C,Ind)],ABox,classAssertion):-
+	(   ground(Ind) -> true;
+	find((classAssertion(_,Ind),_),ABox)),
+	owl2_model:lpClassAssertion(C).
 
 %-------------
 % clash managing
@@ -597,7 +597,7 @@ existsInKB(R,C):-
   get_trill_current_module(Name),
   Name:equivalentClasses(L),
   member(someValuesFrom(R,C),L).
-  
+
 
 /* *************** */
 
@@ -1432,9 +1432,7 @@ writeABox((ABox,_)):-
 
 build_abox((ABox,Tabs)):-
   get_trill_current_module(Name),
-  findall((classAssertion(Class,Individual),[classAssertion(Class,Individual)]),Name:classAssertion(Class,Individual),DL_LCA),
-  findall((lpClassAssertion(Class,Individual),[lpClassAssertion(Class,Individual)]),Name:lpClassAssertion(Class,Individual),LP_LCA),
-  append(DL_LCA,LP_LCA,LCA),
+  findall((classAssertion(Class,Individual),[classAssertion(Class,Individual)]),Name:classAssertion(Class,Individual),LCA),
   findall((propertyAssertion(Property,Subject, Object),[propertyAssertion(Property,Subject, Object)]),Name:propertyAssertion(Property,Subject, Object),LPA),
   findall((propertyAssertion(Property,Subject,Object),[subPropertyOf(SubProperty,Property),propertyAssertion(SubProperty,Subject,Object)]),subProp(Name,SubProperty,Property,Subject,Object),LSPA),
   findall(nominal(NominalIndividual),Name:classAssertion(oneOf(_),NominalIndividual),LNA),
