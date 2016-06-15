@@ -54,7 +54,9 @@
         owl2_model:maxCardinality/2,
         owl2_model:maxCardinality/3,
         owl2_model:minCardinality/2,
-        owl2_model:minCardinality/3.
+        owl2_model:minCardinality/3,
+        %lp versions
+        owl2_model:lpClassAssertion/1.
 
 
 load_theory(Name):-
