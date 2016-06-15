@@ -148,7 +148,7 @@ instanceOf(Class,Ind,Expl):-
 	add(ABox,(classAssertion(complementOf(Class),Ind),[]),ABox0),
 	%findall((ABox1,Tabs1),apply_rules_0((ABox0,Tabs),(ABox1,Tabs1)),L),
 	findall((ABox1,Tabs1),apply_all_rules((ABox0,Tabs),(ABox1,Tabs1)),L),
-	find_expls(L,Expl),
+	find_expls(L,complementOf(Class),Expl),
 	dif(Expl,[])
     ;
 	Expl = ["IRIs not existent"],!
@@ -271,13 +271,14 @@ prob_inconsistent_theory(P):-
   all_inconsistent_theory(Exps),
   compute_prob(Exps,P).
 
-find_expls([],[]).
+find_expls([],_,[]).
 
-find_expls([ABox|_T],E):-
-  clash(ABox,E),
+find_expls([ABox|_T],Query,Ex):-
+  findall((C,E),clash(ABox,C,E),L),
+  member(([_,Query],Ex),L),
   findall(Exp,exp_found(Exp),Expl),
-  not_already_found(Expl,E),
-  assert(exp_found(E)).
+  not_already_found(Expl,Ex),
+  assert(exp_found(Ex)).
 
 find_expls([_ABox|T],Expl):-
   \+ length(T,0),
@@ -332,12 +333,15 @@ findClassAssertion(C,Ind,[lpClassAssertion(C,Ind)],ABox,classAssertion):-
 % TO IMPROVE!
 %------------
 clash((ABox,_),Expl):-
+  clash((ABox,_),_,Expl).
+
+clash((ABox,_),[C,complementOf(C)],Expl):-
   %write('clash 1'),nl,
   findClassAssertion(C,Ind,Expl1,ABox,_),
   findClassAssertion(complementOf(C),Ind,Expl2,ABox,_),
   append(Expl1,Expl2,Expl).
 
-clash((ABox,_),Expl):-
+clash((ABox,_),[sameIndividual(LS),differentIndividuals(LD)],Expl):-
   %write('clash 2'),nl,
   find((sameIndividual(LS),Expl1),ABox),
   find((differentIndividuals(LD),Expl2),ABox),
@@ -348,7 +352,7 @@ clash((ABox,_),Expl):-
   dif(X,Y),
   append(Expl1,Expl2,Expl).
 
-clash((ABox,_),Expl):-
+clash((ABox,_),[C,complementOf(C)],Expl):-
   %write('clash 3'),nl,
   findClassAssertion(C,sameIndividual(L1),Expl1,ABox,_),
   findClassAssertion(complementOf(C),sameIndividual(L2),Expl2,ABox,_),
@@ -356,21 +360,21 @@ clash((ABox,_),Expl):-
   member(X,L2),!,
   append(Expl1,Expl2,Expl).
 
-clash((ABox,_),Expl):-
+clash((ABox,_),[C,complementOf(C)],Expl):-
   %write('clash 4'),nl,
   findClassAssertion(C,Ind1,Expl1,ABox,_),
   findClassAssertion(complementOf(C),sameIndividual(L2),Expl2,ABox,_),
   member(Ind1,L2),
   append(Expl1,Expl2,Expl).
 
-clash((ABox,_),Expl):-
+clash((ABox,_),[C,complementOf(C)],Expl):-
   %write('clash 5'),nl,
   findClassAssertion(C,sameIndividual(L1),Expl1,ABox,_),
   findClassAssertion(complementOf(C),Ind2,Expl2,ABox,_),
   member(Ind2,L1),
   append(Expl1,Expl2,Expl).
 
-clash((ABox,Tabs),Expl):-
+clash((ABox,Tabs),[maxCardinality(N,S,C),LSS],Expl):-
   %write('clash 6'),nl,
   findClassAssertion(maxCardinality(N,S,C),Ind,Expl1,ABox,_),
   s_neighbours(Ind,S,(ABox,Tabs),SN),
@@ -381,7 +385,7 @@ clash((ABox,Tabs),Expl):-
   flatten(Expl2,Expl3),
   list_to_set(Expl3,Expl).
 
-clash((ABox,Tabs),Expl):-
+clash((ABox,Tabs),[maxCardinality(N,S),LSS],Expl):-
   %write('clash 7'),nl,
   findClassAssertion(maxCardinality(N,S),Ind,Expl1,ABox,_),
   s_neighbours(Ind,S,(ABox,Tabs),SN),
@@ -404,7 +408,7 @@ make_expl(Ind,S,[H|T],Expl1,ABox,[Expl2|Expl]):-
 % -------------
 
 apply_all_rules(ABox0,ABox):-
-  apply_det_rules([o_rule,and_rule,unfold_rule,add_exists_rule,forall_rule,forall_plus_rule,exists_rule,min_rule,ce_rule],ABox0,ABox1),
+  apply_det_rules([o_rule,and_rule,unfold_rule,add_exists_rule,forall_rule,forall_plus_rule,exists_rule,min_rule],ABox0,ABox1),
   (ABox0=ABox1 *->
   ABox=ABox1;
   apply_all_rules(ABox1,ABox)).
