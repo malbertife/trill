@@ -404,7 +404,7 @@ make_expl(Ind,S,[H|T],Expl1,ABox,[Expl2|Expl]):-
 % -------------
 
 apply_all_rules(ABox0,ABox):-
-  apply_det_rules([o_rule,and_rule,unfold_rule,add_exists_rule,forall_rule,forall_plus_rule,exists_rule,min_rule],ABox0,ABox1),
+  apply_det_rules([o_rule,and_rule,unfold_rule,add_exists_rule,forall_rule,forall_plus_rule,exists_rule,min_rule,ce_rule],ABox0,ABox1),
   (ABox0=ABox1 *->
   ABox=ABox1;
   apply_all_rules(ABox1,ABox)).

@@ -13,8 +13,8 @@ solveNewGoals([H|T],G):-
                 solve(H),
                 solveNewGoals(T,G).
  
-solve(true).
-solve((A,B)):-
+solve(true):-!.
+solve((A,B)):-!,
                 solve(A),
                 solve(B).
 solve(nbf(Goal)):-
