@@ -886,10 +886,12 @@ find_class_prop_range_domain(Ind,D,[propertyDomain(R,D)|ExplPA],(ABox,_Tabs)):-
 
 
 %-----------------
+% subClassOf
 find_sub_sup_class(C,D,subClassOf(C,D)):-
   get_trill_current_module(Name),
   Name:subClassOf(C,D).
 
+%equivalentClasses
 find_sub_sup_class(C,D,equivalentClasses(L)):-
   get_trill_current_module(Name),
   Name:equivalentClasses(L),
@@ -897,6 +899,71 @@ find_sub_sup_class(C,D,equivalentClasses(L)):-
   member(D,L),
   dif(C,D).
 
+%concept for concepts allValuesFrom
+find_sub_sup_class(allValuesFrom(R,C),allValuesFrom(R,D),subClassOf(C,D)):-
+  get_trill_current_module(Name),
+  Name:subClassOf(C,D).
+
+%role for concepts allValuesFrom
+find_sub_sup_class(allValuesFrom(R,C),allValuesFrom(S,C),subPropertyOf(R,S)):-
+  get_trill_current_module(Name),
+  Name:subPropertyOf(R,S).
+
+%concept for concepts someValuesFrom
+find_sub_sup_class(someValuesFrom(R,C),someValuesFrom(R,D),subClassOf(C,D)):-
+  get_trill_current_module(Name),
+  Name:subClassOf(C,D).
+
+%role for concepts someValuesFrom
+find_sub_sup_class(someValuesFrom(R,C),someValuesFrom(S,C),subPropertyOf(R,S)):-
+  get_trill_current_module(Name),
+  Name:subPropertyOf(R,S).
+
+%role for concepts exactCardinality
+find_sub_sup_class(exactCardinality(N,R),exactCardinality(N,S),subPropertyOf(R,S)):-
+  get_trill_current_module(Name),
+  Name:subPropertyOf(R,S).
+
+%concept for concepts exactCardinality
+find_sub_sup_class(exactCardinality(N,R,C),exactCardinality(N,R,D),subClassOf(C,D)):-
+  get_trill_current_module(Name),
+  Name:subClassOf(C,D).
+
+%role for concepts exactCardinality
+find_sub_sup_class(exactCardinality(N,R,C),exactCardinality(N,S,C),subPropertyOf(R,S)):-
+  get_trill_current_module(Name),
+  Name:subPropertyOf(R,S).
+
+%role for concepts maxCardinality
+find_sub_sup_class(maxCardinality(N,R),maxCardinality(N,S),subPropertyOf(R,S)):-
+  get_trill_current_module(Name),
+  Name:subPropertyOf(R,S).
+  
+%concept for concepts maxCardinality
+find_sub_sup_class(maxCardinality(N,R,C),maxCardinality(N,R,D),subClassOf(C,D)):-
+  get_trill_current_module(Name),
+  Name:subClassOf(C,D).
+
+%role for concepts maxCardinality
+find_sub_sup_class(minCardinality(N,R,C),maxCardinality(N,S,C),subPropertyOf(R,S)):-
+  get_trill_current_module(Name),
+  Name:subPropertyOf(R,S).
+
+%role for concepts minCardinality
+find_sub_sup_class(minCardinality(N,R),minCardinality(N,S),subPropertyOf(R,S)):-
+  get_trill_current_module(Name),
+  Name:subPropertyOf(R,S).
+  
+%concept for concepts minCardinality
+find_sub_sup_class(minCardinality(N,R,C),minCardinality(N,R,D),subClassOf(C,D)):-
+  get_trill_current_module(Name),
+  Name:subClassOf(C,D).
+
+%role for concepts minCardinality
+find_sub_sup_class(minCardinality(N,R,C),minCardinality(N,S,C),subPropertyOf(R,S)):-
+  get_trill_current_module(Name),
+  Name:subPropertyOf(R,S).
+  
 /*******************
  managing the concept (C subclassOf Thing)
  this implementation doesn't work well in a little set of cases
