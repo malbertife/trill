@@ -19,15 +19,14 @@ solveNewGoals([H|T],G):-
                 solveNewGoals(T,G).
 
 solve(G) :-
-  retractall(abox(_)),
-  build_and_expand(A),
-  assert(abox(A)),
+  %retractall(abox(_)),
+  retractall(ind(_)),
+  build_and_expand(_),
+  %assert(abox(A)),
   solvei(G).
  
 solvei(true):-!.
-solvei((A,B)):-!,
-                solvei(A),
-                solvei(B).
+
 % gestione clausole a(X):-b(X,Y),c(Y)
 solvei((A,B)):-
 		A=..[R,I,Y],
@@ -36,7 +35,12 @@ solvei((A,B)):-
 		include(is_lp_assertion,Explanation,LPAssertions),
                 maplist(lp_assertion_to_atom,LPAssertions,Atoms),
                 solveNewGoals(Atoms,(A,B)).
-                
+
+solvei((A,B)):-!,
+                solvei(A),
+                solvei(B).
+
+
 solvei(nbf(Goal)):-
                 !,
                 \+(solvei(Goal)).
@@ -178,7 +182,7 @@ solveii(someValuesFrom(R,C),I):-
   - creazione ed espansione abox completa.
   - il meta interprete prende il goal e cerca di risolverlo nel seguente ordine:
   	1. usando LP
-  	2. usando trill
+  	2. usando trill (le abox create vengono salvate per usarle dopo) 
   	3. cercando subClassOf e equivalentClasses per andare da super a sub class (anche per property)
   		devo eseguire il goal a(c) -> cerco subClassOf(b,a) -> eseguo goal b(c)
   	4. espandere eventuali concetti complessi usando regole prolog clause/2

@@ -52,7 +52,9 @@
         owl2_model:minCardinality/3,
         %lp versions
         owl2_model:lpClassAssertion/1,
-        owl2_model:lpClassAssertion/2.
+        owl2_model:lpClassAssertion/2,
+	owl2_model:lpPropertyAssertion/1,
+        owl2_model:lpPropertyAssertion/2.
 
 
 :- thread_local
@@ -84,7 +86,9 @@ axiom(A):-
   Name:axiom(A).
 
 build_and_expand(T):-
-  build_abox(T).
+  retractall(abox(_)),
+  build_abox(T),
+  assert(abox([T])).
 
 instanceOf_meta(C,I,E):-
   retractall(exp_found(_)),
@@ -95,11 +99,16 @@ instanceOf_meta(C,I,E):-
        NewAnon = 1
   ),
   assert(ind(NewAnon)),
-  abox((ABox,Tabs)),
+  abox(LABox),
+  member((ABox,Tabs),LABox),
+  %abox((ABox,Tabs)),
   add(ABox,(classAssertion(complementOf(C),I),[]),ABox0),
   %findall((ABox1,Tabs1),apply_rules_0((ABox0,Tabs),(ABox1,Tabs1)),L),
   findall((ABox1,Tabs1),apply_all_rules((ABox0,Tabs),(ABox1,Tabs1)),L),
   find_expls(L,E),
+  delete_from(L,(classAssertion(complementOf(C),I),[]),L0),
+  retractall(abox(_)),
+  assert(abox(L0)),
   dif(E,[]).
 
 property_value_meta(R,I1,I2,E):-
@@ -111,10 +120,22 @@ property_value_meta(R,I1,I2,E):-
        NewAnon = 1
   ),
   assert(ind(NewAnon)),
-  abox((ABox,Tabs)),
+  abox(LABox),
+  member((ABox,Tabs),LABox),
+  %abox((ABox,Tabs)),
   findall((ABox1,Tabs1),apply_all_rules((ABox,Tabs),(ABox1,Tabs1)),L),
   find_expls(L,[R,I1,I2],E),
+  retractall(abox(_)),
+  assert(abox(L)),
   dif(E,[]).
+
+delete_from([],_,[]).
+
+delete_from([(ABox0,Tab)|T],Q,[(ABox,Tab)|T1]):-
+  %writel(ABox0),
+  delete(ABox0,Q,ABox),
+  delete_from(T,Q,T1).
+
 
 /*****************************
   MESSAGES
