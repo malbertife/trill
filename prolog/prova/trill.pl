@@ -59,7 +59,7 @@
 
 :- thread_local
 	ind/1,
-	exp_found/1.
+	exp_found/2.
 
 /********************************
   LOAD KNOWLEDGE BASE
@@ -86,12 +86,13 @@ axiom(A):-
   Name:axiom(A).
 
 build_and_expand(T):-
+  retractall(exp_found(_,_)),
   retractall(abox(_)),
   build_abox(T),
   assert(abox([T])).
 
 instanceOf_meta(C,I,E):-
-  retractall(exp_found(_)),
+  retractall(exp_found(_,_)),
   ( ind(Anon) -> 
       (retractall(ind(_)),
        NewAnon is Anon + 1)
@@ -105,14 +106,14 @@ instanceOf_meta(C,I,E):-
   add(ABox,(classAssertion(complementOf(C),I),[]),ABox0),
   %findall((ABox1,Tabs1),apply_rules_0((ABox0,Tabs),(ABox1,Tabs1)),L),
   findall((ABox1,Tabs1),apply_all_rules((ABox0,Tabs),(ABox1,Tabs1)),L),
-  find_expls(L,E),
+  find_expls(L,[C,I],E),
   delete_from(L,(classAssertion(complementOf(C),I),[]),L0),
   retractall(abox(_)),
   assert(abox(L0)),
   dif(E,[]).
 
 property_value_meta(R,I1,I2,E):-
-  retractall(exp_found(_)),
+  retractall(exp_found(_,_)),
   ( ind(Anon) -> 
       (retractall(ind(_)),
        NewAnon is Anon + 1)
@@ -173,7 +174,7 @@ sub_class(Class,SupClass):-
 
 instanceOf(Class,Ind,Expl):-
   ( check_query_args([Class,Ind],[ClassEx,IndEx]) *->
-	retractall(exp_found(_)),
+	retractall(exp_found(_,_)),
 	retractall(ind(_)),
   	assert(ind(1)),
   	build_abox((ABox,Tabs)),
@@ -182,7 +183,7 @@ instanceOf(Class,Ind,Expl):-
   	    	add(ABox,(classAssertion(complementOf(ClassEx),IndEx),[]),ABox0),
 	  	%findall((ABox1,Tabs1),apply_rules_0((ABox0,Tabs),(ABox1,Tabs1)),L),
   		findall((ABox1,Tabs1),apply_all_rules((ABox0,Tabs),(ABox1,Tabs1)),L),
-  		find_expls(L,Expl),
+  		find_expls(L,[Class,Ind],Expl),
   		dif(Expl,[])
   	    )
   	 ;
@@ -195,7 +196,7 @@ instanceOf(Class,Ind,Expl):-
 instanceOf(Class,Ind):-
   (  check_query_args([Class,Ind],[ClassEx,IndEx]) *->
 	(  
-	  retractall(exp_found(_)),
+	  retractall(exp_found(_,_)),
 	  retractall(ind(_)),
 	  assert(ind(1)),
 	  build_abox((ABox,Tabs)),
@@ -216,7 +217,7 @@ instanceOf(Class,Ind):-
 
 property_value(Prop, Ind1, Ind2,Expl):-
   ( check_query_args([Prop,Ind1,Ind2],[PropEx,Ind1Ex,Ind2Ex]) *->
-	retractall(exp_found(_)),
+	retractall(exp_found(_,_)),
 	retractall(ind(_)),
   	assert(ind(1)),
   	build_abox((ABox,Tabs)),
@@ -236,7 +237,7 @@ property_value(Prop, Ind1, Ind2,Expl):-
 property_value(Prop, Ind1, Ind2):-
   (  check_query_args([Prop,Ind1,Ind2],[PropEx,Ind1Ex,Ind2Ex]) *->
 	(  
-	  retractall(exp_found(_)),
+	  retractall(exp_found(_,_)),
 	  retractall(ind(_)),
 	  assert(ind(1)),
 	  build_abox((ABox,Tabs)),
@@ -263,7 +264,7 @@ unsat(Concept,Expl):-
 
 % ----------- %
 unsat_internal(Concept,Expl):-
-  retractall(exp_found(_)),
+  retractall(exp_found(_,_)),
   retractall(ind(_)),
   assert(ind(2)),
   build_abox((ABox,Tabs)),
@@ -272,7 +273,7 @@ unsat_internal(Concept,Expl):-
      	add(ABox,(classAssertion(Concept,1),[]),ABox0),
 	%findall((ABox1,Tabs1),apply_rules_0((ABox0,Tabs),(ABox1,Tabs1)),L),
 	findall((ABox1,Tabs1),apply_all_rules((ABox0,Tabs),(ABox1,Tabs1)),L),
-	find_expls(L,Expl),
+	find_expls(L,['unsat',Concept],Expl),
 	dif(Expl,[])
      )
     ;
@@ -289,7 +290,7 @@ unsat(Concept):-
 
 % ----------- %
 unsat_internal(Concept):-
-  retractall(exp_found(_)),
+  retractall(exp_found(_,_)),
   retractall(ind(_)),
   assert(ind(2)),
   build_abox((ABox,Tabs)),
@@ -306,16 +307,16 @@ unsat_internal(Concept):-
 % ----------- %
 
 inconsistent_theory(Expl):-
-  retractall(exp_found(_)),
+  retractall(exp_found(_,_)),
   retractall(ind(_)),
   assert(ind(1)),
   build_abox((ABox,Tabs)),
   findall((ABox1,Tabs1),apply_all_rules((ABox,Tabs),(ABox1,Tabs1)),L),
-  find_expls(L,Expl),
+  find_expls(L,['inconsistent','kb'],Expl),
   dif(Expl,[]).
 
 inconsistent_theory:-
-  retractall(exp_found(_)),
+  retractall(exp_found(_,_)),
   retractall(ind(_)),
   assert(ind(1)),
   build_abox((ABox,Tabs)),
@@ -477,43 +478,46 @@ find_atom_in_axioms(Name,H):-
   member(H,L1),!.
 
 % checks if an explanations was already found
-find_expls([],[]).
+find_expls(ABoxes,E):-
+  find_expls(ABoxes,['standard','query'],E).
 
-find_expls([ABox|_T],E):-
+find_expls([],[_,_],[]).
+
+find_expls([ABox|_T],[C,I],E):-
   clash(ABox,E),
-  findall(Exp,exp_found(Exp),Expl),
-  not_already_found(Expl,E),
-  assert(exp_found(E)).
+  findall(Exp,exp_found([C,I],Exp),Expl),
+  not_already_found(Expl,[C,I],E),
+  assert(exp_found([C,I],E)).
 
-find_expls([_ABox|T],Expl):-
+find_expls([_ABox|T],[C,I],Expl):-
   \+ length(T,0),
-  find_expls(T,Expl).
+  find_expls(T,[C,I],Expl).
 
 % checks if an explanations was already found (property_value version)
-find_expls([],_,[]).
+find_expls([],[_,_,_],[]).
 
 find_expls([(ABox,_)|_T],[PropEx,Ind1Ex,Ind2Ex],E):-
   find((propertyAssertion(PropEx,Ind1Ex,Ind2Ex),E),ABox),
-  findall(Exp,exp_found(Exp),Expl),
-  not_already_found(Expl,E),
-  assert(exp_found(E)).
+  findall(Exp,exp_found([PropEx,Ind1Ex,Ind2Ex],Exp),Expl),
+  not_already_found(Expl,[PropEx,Ind1Ex,Ind2Ex],E),
+  assert(exp_found([PropEx,Ind1Ex,Ind2Ex],E)).
 
 find_expls([_ABox|T],[PropEx,Ind1Ex,Ind2Ex],Expl):-
   \+ length(T,0),
   find_expls(T,[PropEx,Ind1Ex,Ind2Ex],Expl).
   
-not_already_found([],_E):-!.
+not_already_found([],_Q,_E):-!.
 
-not_already_found([H|_T],E):-
+not_already_found([H|_T],_Q,E):-
   subset(H,E),!,
   fail.
   
-not_already_found([H|_T],E):-
+not_already_found([H|_T],Q,E):-
   subset(E,H),!,
-  retract(exp_found(H)).
+  retract(exp_found(Q,H)).
 
-not_already_found([_H|T],E):-
-  not_already_found(T,E).
+not_already_found([_H|T],Q,E):-
+  not_already_found(T,Q,E).
 
 /****************************/
 
