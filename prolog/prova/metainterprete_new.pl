@@ -40,7 +40,6 @@ solvei((A,B)):-!,
                 solvei(A),
                 solvei(B).
 
-
 solvei(nbf(Goal)):-
                 !,
                 \+(solvei(Goal)).
