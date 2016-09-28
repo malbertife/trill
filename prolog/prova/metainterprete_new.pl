@@ -19,7 +19,11 @@ solveNewGoals([H|T],G,GAS,GS,E):-
                 solveNewGoals(T,G,GSH,GS,ET),
                 append(EH,ET,E).
 
-solve(G) :-
+prob(G,Prob) :-
+ findall(Ex,solve(G,Ex),Expl),
+ trill:compute_prob(Expl,Prob).
+
+solve(G,Ex) :-
   %retractall(abox(_)),
   retractall(ind(_)),
   build_and_expand(_),
@@ -28,6 +32,9 @@ solve(G) :-
   list_to_set(E,Ex),
   write(Ex),
   write(GS).
+
+solve(G) :-
+  solve(G,_).
  
 solvei(true,GS,GS,[]):-!.
 
@@ -48,10 +55,13 @@ solvei((A,B),GAS,[B|GS],E):-!,
                 append(EA,EB,E).
 
 
-solvei(nbf(Goal),GAS,GS,['toImplement'|E]):-
+solvei(nbf(Goal),GAS,GS,E):-
                 !,
-                \+(solvei(Goal),GAS,GS,E).
-                
+                member(nbf(Goal),GAS) ->
+                   GS = GAS, E = []
+                 ;
+                   solve_neg(Goal,GAS,GS,E).
+
 solvei(Goal,GAS,GS,E):-
                 member(Goal,GAS) ->
                   GS=GAS,E=[]
@@ -134,10 +144,21 @@ solvei(Goal,GAS,GS,E):-
                    GS=[propertyAssertion(Role,Individual1,Indovidual2)|GSNG],
                 append(Explanation,Ex,E).
 
+
+solve_neg(Goal,GAS,GS,E) :-
+		solvei(Goal,GAS,GS,Expl) -> 
+		  E = [nbf(Expl)]
+		 ;
+		  E = [], GS = GAS.
+                  
+%solve_neg(Goal,GAS,GS,[]) :-
+%		\+ (solvei(Goal,GAS,GS,_E)).
+
+
 % queste forse saranno da migliorare quando si calcolerà la probabilità
 % se infatti dobbiamo calcolare la probabilità di a(X,Y):-b(X,Y) ci sarà da gestire il caso di individui anonimi
 % creati dalla exists_rule
-%concept for concepts allValuesFrom
+% concept for concepts allValuesFrom
 solveii(allValuesFrom(R,C),I,GAS,GS,E):-
   H=..[C,_],
   clause(H,B),
@@ -149,7 +170,7 @@ solveii(allValuesFrom(R,C),I,GAS,GS,E):-
                 GS=[allValuesFrom(R,D)|GSNG],
   append(Explanation,Ex,E).
 
-%role for concepts allValuesFrom
+% role for concepts allValuesFrom
 solveii(allValuesFrom(R,C),I,GAS,GS,E):-
   H=..[R,_,_],
   clause(H,B),
@@ -161,7 +182,7 @@ solveii(allValuesFrom(R,C),I,GAS,GS,E):-
                 GS=[allValuesFrom(S,C)|GSNG],
   append(Explanation,Ex,E).
   
-%concept and role for concepts allValuesFrom
+% concept and role for concepts allValuesFrom
 solveii(allValuesFrom(R,C),I,GAS,GS,E):-
   H=..[R,_,_],
   clause(H,B),
@@ -176,7 +197,7 @@ solveii(allValuesFrom(R,C),I,GAS,GS,E):-
                 GS=[allValuesFrom(S,D)|GSNG],
   append(Explanation,Ex,E).
 
-%concept for concepts someValuesFrom
+% concept for concepts someValuesFrom
 solveii(someValuesFrom(R,C),I,GAS,GS,E):-
   H=..[C,_],
   clause(H,B),
@@ -188,7 +209,7 @@ solveii(someValuesFrom(R,C),I,GAS,GS,E):-
                 GS=[someValuesFrom(R,D)|GSNG],
   append(Explanation,Ex,E).
 
-%role for concepts someValuesFrom
+% role for concepts someValuesFrom
 solveii(someValuesFrom(R,C),I,GAS,GS,E):-
   H=..[R,_,_],
   clause(H,B),
@@ -200,7 +221,7 @@ solveii(someValuesFrom(R,C),I,GAS,GS,E):-
                 GS=[someValuesFrom(S,C)|GSNG],
   append(Explanation,Ex,E). 
 
-%concept and role for concepts someValuesFrom
+% concept and role for concepts someValuesFrom
 solveii(someValuesFrom(R,C),I,GAS,GS,E):-
   H=..[R,_,_],
   clause(H,B),

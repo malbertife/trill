@@ -2449,7 +2449,6 @@ compute_prob(Expl,Prob):-
   
   
 
-
 build_bdd(Env,[X],BDD):- !,
   bdd_and(Env,X,BDD).
   
@@ -2462,13 +2461,24 @@ build_bdd(Env,[],BDD):- !,
   zero(Env,BDD).
   
   
+bdd_and(Env,[nbf(Expl)],BDDNeg):-!,
+  bdd_and(Env,Expl,BDD2Neg),
+  bdd_not(Env,BDD2Neg,BDDNeg).
+  
 bdd_and(Env,[X],BDDX):-
   get_prob_ax(X,AxN,Prob),!,
   ProbN is 1-Prob,
   get_var_n(Env,AxN,[],[Prob,ProbN],VX),
   equality(Env,VX,0,BDDX),!.
+  
 bdd_and(Env,[_X],BDDX):- !,
   one(Env,BDDX).
+
+bdd_and(Env,[nbf(Expl)|T],BDDAnd):-
+  bdd_and(Env,Expl,BDD2Neg),
+  bdd_not(Env,BDD2Neg,BDDNeg),
+  bdd_and(Env,T,BDDT),
+  and(Env,BDDNeg,BDDT,BDDAnd).
   
 bdd_and(Env,[H|T],BDDAnd):-
   get_prob_ax(H,AxN,Prob),!,
@@ -2552,7 +2562,7 @@ sandbox:safe_primitive(trill:one(_,_)).
 sandbox:safe_primitive(trill:zero(_,_)).
 sandbox:safe_primitive(trill:and(_,_,_,_)).
 sandbox:safe_primitive(trill:or(_,_,_,_)).
-%sandbox:safe_primitive(trill:bdd_not(_,_,_)).
+sandbox:safe_primitive(trill:bdd_not(_,_,_)).
 sandbox:safe_primitive(trill:get_var_n(_,_,_,_,_)).
 sandbox:safe_primitive(trill:add_var(_,_,_,_,_)).
 sandbox:safe_primitive(trill:equality(_,_,_,_)).
