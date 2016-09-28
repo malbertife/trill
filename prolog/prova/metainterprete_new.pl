@@ -1,5 +1,8 @@
 %:-use_module(library(trill)).
 :-use_module(trill).
+
+:- style_check(-discontiguous).
+
  
 is_lp_assertion(lpClassAssertion(_,_)).
 is_lp_assertion(lpPropertyAssertion(_,_,_)).
@@ -146,7 +149,7 @@ solvei(Goal,GAS,GS,E):-
 
 
 solve_neg(Goal,GAS,GS,E) :-
-		solvei(Goal,GAS,GS,Expl) -> 
+		solvei(Goal,GAS,GS,Expl) *-> 
 		  E = [nbf(Expl)]
 		 ;
 		  E = [], GS = GAS.
@@ -248,47 +251,3 @@ solveii(someValuesFrom(R,C),I,GAS,GS,E):-
   		(someValuesFrom(a,b) -> clause(a,e) -> risolve il goal somevalues(e,b))
 ******************************/
 
-:- op(600,xfy,'::').
-
-gen_clauses((Head;T),B,[(H:-B)|Clauses],[annotationAssertion('https://sites.google.com/a/unife.it/ml/disponte#probability',(H:-B),literal(Prob))|ProbAxioms]):- !,
-  (Head = (H:P) ; Head = (P::H)), number(P), !,
-  number_codes(P,PC),
-  atom_codes(Prob,PC),
-  gen_clauses(T,B,Clauses,ProbAxioms).
-  
-gen_clauses(Head,B,[(H:-B)],[annotationAssertion('https://sites.google.com/a/unife.it/ml/disponte#probability',(H:-B),literal(Prob))]):- !, 
-  (Head = (H:P);Head=(P::H)), number(P), !,
-  number_codes(P,PC),
-  atom_codes(Prob,PC).
-
-gen_facts((Head;T),[H|Facts],[annotationAssertion('https://sites.google.com/a/unife.it/ml/disponte#probability',H,literal(Prob))|ProbAxioms]):- !,
-  (Head = (H:P);Head=(P::H)), number(P), !,
-  number_codes(P,PC),
-  atom_codes(Prob,PC),
-  gen_facts(T,Facts,ProbAxioms).
-  
-gen_clauses(Head,[H],[annotationAssertion('https://sites.google.com/a/unife.it/ml/disponte#probability',H,literal(Prob))]):- !,
-  (Head = (H:P);Head=(P::H)), number(P), !,
-  number_codes(P,PC),
-  atom_codes(Prob,PC).
-
-
-user:term_expansion((Head:-B),Clauses) :-
-  Head = (_;_), !, 
-  gen_clauses(Head,B,Clauses,ProbAxioms),
-  trill:add_axioms(ProbAxioms).
-  
-user:term_expansion((Head:-B),Clauses) :-
-  (Head = (_:_);Head=(_::_)), !, 
-  gen_clauses(Head,B,Clauses,ProbAxioms),
-  trill:add_axioms(ProbAxioms).
-
-user:term_expansion((Head),Facts) :-
-  Head = (_;_), !, 
-  gen_facts(Head,Facts,ProbAxioms),
-  trill:add_axioms(ProbAxioms).
-  
-user:term_expansion((Head),Facts) :-
-  (Head = (_:_);Head=(_::_)), !, 
-  gen_facts(Head,Facts,ProbAxioms),
-  trill:add_axioms(ProbAxioms).
