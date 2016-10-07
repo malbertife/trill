@@ -3026,6 +3026,16 @@ trill:remove_axioms([H|T]) :-
   trill:remove_axiom(H),
   trill:remove_axioms(T).
 
+trill:add_pl_axiom(Ax):-
+  assert_axiom(Ax,'ont'),
+  assert(owl(Ax,'ont')).
+
+trill:add_pl_axioms([]).
+
+trill:add_pl_axioms([H|T]) :-
+  trill:add_pl_axiom(H),
+  trill:add_pl_axioms(T).
+
 test_and_assert(Ax,O):-
   (\+ owl(Ax,O) ->
     (assert_axiom(Ax,O), assert(owl(Ax,O)))
@@ -3037,6 +3047,29 @@ get_module(M):-
   pengine_self(Self),
   pengine_property(Self,module(M)),!.  
 get_module('user'):- !.
+
+parse_rdf_from_owl_rdf_pred(String):-
+  get_module(M),
+  open_chars_stream(String,S),
+  process_rdf(stream(S), assert_list(M), [namespaces(NSList)]),
+  close(S),
+  add_kb_prefixes(NSList),
+  rdf_2_owl('ont','ont'),
+  owl_canonical_parse_3(['ont']),
+  parse_probabilistic_annotation_assertions.
+
+create_and_assert_axioms(P,Args) :-
+  ns4query(NSList),
+  ( (length(Args,1), Args = [IntArgs], is_list(IntArgs)) -> 
+       ( expand_all_ns(IntArgs,NSList,ArgsExp),
+         NewTRILLAxiom =.. [P,ArgsExp]
+       )
+     ;
+       ( expand_all_ns(Args,NSList,ArgsExp),
+         NewTRILLAxiom =.. [P|ArgsExp]
+       )
+  ),
+  test_and_assert(NewTRILLAxiom,'ont').
 
 :- multifile sandbox:safe_primitive/1.
 
@@ -3052,28 +3085,12 @@ user:term_expansion(kb_prefix(A,B),[]):-
   trill:add_kb_prefix(A,B).
 
 user:term_expansion(owl_rdf(String),[]):-
-  get_module(M),
-  open_chars_stream(String,S),
-  process_rdf(stream(S), assert_list(M), [namespaces(NSList)]),
-  close(S),
-  add_kb_prefixes(NSList),
-  rdf_2_owl('ont','ont'),
-  owl_canonical_parse_3(['ont']),
-  parse_probabilistic_annotation_assertions.
-
+  parse_rdf_from_owl_rdf_pred(String).
+  
 user:term_expansion(TRILLAxiom,[]):-
   TRILLAxiom =.. [P|Args],
   member(P, [class,datatype,objectProperty,dataProperty,annotationProperty,namedIndividual,subClassOf,equivalentClasses,disjointClasses,disjointUnion,subPropertyOf,equivalentProperties,disjointProperties,
 inverseProperties,propertyDomain,propertyRange,functionalProperty,inverseFunctionalProperty,reflexiveProperty,irreflexiveProperty,symmetricProperty,asymmetricProperty,transitiveProperty,hasKey,
-sameIndividual,differentIndividuals,classAssertion,propertyAssertion,negativePropertyAssertion,annotationAssertion]),
-  ns4query(NSList),
-  ( (length(Args,1), Args = [IntArgs], is_list(IntArgs)) -> 
-       ( expand_all_ns(IntArgs,NSList,ArgsExp),
-         NewTRILLAxiom =.. [P,ArgsExp]
-       )
-     ;
-       ( expand_all_ns(Args,NSList,ArgsExp),
-         NewTRILLAxiom =.. [P|ArgsExp]
-       )
-  ),
-  test_and_assert(NewTRILLAxiom,'ont').
+sameIndividual,differentIndividuals,classAssertion,propertyAssertion,negativePropertyAssertion,annotationAssertion,
+lpClassAssertion,lpPropertyAssertion]),
+  create_and_assert_axioms(P,Args).

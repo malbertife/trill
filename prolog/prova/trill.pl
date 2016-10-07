@@ -20,7 +20,7 @@
 
 
 
-:- use_foreign_library(foreign(bddem),install).
+%:- use_foreign_library(foreign(bddem),install).
 
 :- style_check(-discontiguous).
 
@@ -44,6 +44,7 @@
         owl2_model:propertyRange/2,
         owl2_model:propertyDomain/2,
         owl2_model:annotationAssertion/3,
+        owl2_model:annotationAssertion/4,
         owl2_model:exactCardinality/2,
         owl2_model:exactCardinality/3,
         owl2_model:maxCardinality/2,
@@ -107,9 +108,9 @@ instanceOf_meta(C,I,E):-
   %findall((ABox1,Tabs1),apply_rules_0((ABox0,Tabs),(ABox1,Tabs1)),L),
   findall((ABox1,Tabs1),apply_all_rules((ABox0,Tabs),(ABox1,Tabs1)),L),
   find_expls(L,[C,I],E),
-  delete_from(L,(classAssertion(complementOf(C),I),[]),L0),
-  retractall(abox(_)),
-  assert(abox(L0)),
+  %delete_from(L,(classAssertion(complementOf(C),I),[]),L0),
+  %retractall(abox(_)),
+  %assert(abox(L0)),
   dif(E,[]).
 
 property_value_meta(R,I1,I2,E):-
@@ -126,8 +127,8 @@ property_value_meta(R,I1,I2,E):-
   %abox((ABox,Tabs)),
   findall((ABox1,Tabs1),apply_all_rules((ABox,Tabs),(ABox1,Tabs1)),L),
   find_expls(L,[R,I1,I2],E),
-  retractall(abox(_)),
-  assert(abox(L)),
+  %retractall(abox(_)),
+  %assert(abox(L)),
   dif(E,[]).
 
 delete_from([],_,[]).
@@ -183,7 +184,7 @@ instanceOf(Class,Ind,Expl):-
   	    	add(ABox,(classAssertion(complementOf(ClassEx),IndEx),[]),ABox0),
 	  	%findall((ABox1,Tabs1),apply_rules_0((ABox0,Tabs),(ABox1,Tabs1)),L),
   		findall((ABox1,Tabs1),apply_all_rules((ABox0,Tabs),(ABox1,Tabs1)),L),
-  		find_expls(L,[Class,Ind],Expl),
+  		find_expls(L,[ClassEx,IndEx],Expl),
   		dif(Expl,[])
   	    )
   	 ;
@@ -485,9 +486,18 @@ find_expls([],[_,_],[]).
 
 find_expls([ABox|_T],[C,I],E):-
   clash(ABox,E),
-  findall(Exp,exp_found([C,I],Exp),Expl),
-  not_already_found(Expl,[C,I],E),
-  assert(exp_found([C,I],E)).
+  \+ member(lpClassAssertion(C,I),E),
+  (
+    (member(Ax,E),
+     Ax\=lpClassAssertion(_,_),
+     Ax\=lpPropertyAssertion(_,_,_)) ->
+  	(findall(Exp,exp_found([C,I],Exp),Expl),
+  	 not_already_found(Expl,[C,I],E),
+  	 assert(exp_found([C,I],E))
+  	)
+    ;
+	false
+  ).
 
 find_expls([_ABox|T],[C,I],Expl):-
   \+ length(T,0),
@@ -498,9 +508,18 @@ find_expls([],[_,_,_],[]).
 
 find_expls([(ABox,_)|_T],[PropEx,Ind1Ex,Ind2Ex],E):-
   find((propertyAssertion(PropEx,Ind1Ex,Ind2Ex),E),ABox),
-  findall(Exp,exp_found([PropEx,Ind1Ex,Ind2Ex],Exp),Expl),
-  not_already_found(Expl,[PropEx,Ind1Ex,Ind2Ex],E),
-  assert(exp_found([PropEx,Ind1Ex,Ind2Ex],E)).
+  \+ member(lpPropertyAssertion(PropEx,Ind1Ex,Ind2Ex),E),
+  (
+    (member(Ax,E),
+     Ax\=lpClassAssertion(_,_),
+     Ax\=lpPropertyAssertion(_,_,_)) ->
+  	(findall(Exp,exp_found([PropEx,Ind1Ex,Ind2Ex],Exp),Expl),
+  	 not_already_found(Expl,[PropEx,Ind1Ex,Ind2Ex],E),
+  	 assert(exp_found([PropEx,Ind1Ex,Ind2Ex],E))
+  	)
+    ;
+	false
+  ).
 
 find_expls([_ABox|T],[PropEx,Ind1Ex,Ind2Ex],Expl):-
   \+ length(T,0),
@@ -2426,7 +2445,7 @@ compute_prob_ax1([Prob1 | T],Prob):-
 TRILL COMPUTEPROB
 
 ***********************/
-
+/*
 :- thread_local 
 	%get_var_n/5,
         rule_n/1,
@@ -2532,7 +2551,7 @@ get_prob_ax(Ax,N,Prob):- !,
   
 compute_prob_ax(Ax,Prob):-
   get_trill_current_module(Name),
-  findall(ProbA, (Name:annotationAssertion('https://sites.google.com/a/unife.it/ml/disponte#probability',Ax,literal(ProbAT)),atom_number(ProbAT,ProbA)),Probs),
+  findall(ProbA,(Name:annotationAssertion('https://sites.google.com/a/unife.it/ml/disponte#probability',Ax,literal(ProbAT)),atom_number(ProbAT,ProbA)),Probs),
   compute_prob_ax1(Probs,Prob).
   
 compute_prob_ax1([Prob],Prob):-!.
@@ -2542,7 +2561,8 @@ compute_prob_ax1([Prob1,Prob2],Prob):-!,
   
 compute_prob_ax1([Prob1 | T],Prob):-
   compute_prob_ax1(T,Prob0),
-  Prob is Prob1 + Prob0 - (Prob1*Prob0).  
+  Prob is Prob1 + Prob0 - (Prob1*Prob0). 
+*/ 
 /************************/
 
 /**************/
@@ -2554,7 +2574,7 @@ get_trill_current_module('owl2_model'):- !.
 /**************/
 
 :- multifile sandbox:safe_primitive/1.
-
+/*
 sandbox:safe_primitive(trill:init_test(_,_)).
 sandbox:safe_primitive(trill:ret_prob(_,_,_)).
 sandbox:safe_primitive(trill:end_test(_)).
@@ -2566,7 +2586,7 @@ sandbox:safe_primitive(trill:bdd_not(_,_,_)).
 sandbox:safe_primitive(trill:get_var_n(_,_,_,_,_)).
 sandbox:safe_primitive(trill:add_var(_,_,_,_,_)).
 sandbox:safe_primitive(trill:equality(_,_,_,_)).
-
+*/
 
 sandbox:safe_primitive(trill:sub_class(_,_)).
 sandbox:safe_primitive(trill:sub_class(_,_,_)).
