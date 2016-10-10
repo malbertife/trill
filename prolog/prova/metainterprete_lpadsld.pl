@@ -24,9 +24,9 @@ prob(Goal,P) :-
 find_expl(GoalsList,Deriv):-
 	retractall(ind(_)),
 	build_and_expand(_),
-	solve(GoalsList,[],DerivDup),
+	solve(GoalsList,[],DerivDup, [],GS),
 	%write(DerivDup),nl,
-	sort(DerivDup,Deriv),write(Deriv),nl,nl.
+	sort(DerivDup,Deriv),write(Deriv),nl,write(GS),nl,nl.
 	
 	
 /* solve(GoalsList,CIn,COut) takes a list of goals and an input C set
@@ -38,28 +38,36 @@ The C set is a list of triple (N,R,S) where
 	are of the form 'VarName'=value
 */
 
-solve([],C,C) :- !.
+solve([],C,C, GS,GS) :- !.
 
 
 /* negation, both \+ and nbf/1 are usable */
 
-solve([\+ H |T],CIn,COut) :- !,
-	list2and(HL,H),
-	(setof(Expl,solve(HL,[],Expl),CN) ->
+solve([\+ H |T],CIn,COut, GAS,GS) :- !,
+    (member(nbf(H),GAS) -> solve(T,CIn,COut, GAS,GS)
+        ;
+	(list2and(HL,H),
+	(setof(Expl,solve(HL,[],Expl, GAS,GAS1),CN) ->
 		append(CIn,[nbf(CN)],C1),
- 		solve(T,C1,COut)
+ 		solve(T,C1,COut, [nbf(H)|GAS1],GS)
  	 ;
- 	 	solve(T,CIn,COut)
- 	).
+ 	 	solve(T,CIn,COut, [nbf(H)|GAS],GS)
+ 	)
+ 	)
+    ).
 
-solve([nbf(H)|T],CIn,COut) :- !,
-	list2and(HL,H),
-	(setof(Expl,solve(HL,[],Expl),CN) ->
+solve([nbf(H)|T],CIn,COut, GAS,GS) :- !,
+    (member(nbf(H),GAS) -> solve(T,CIn,COut, GAS,GS)
+        ;
+	(list2and(HL,H),
+	(setof(Expl,solve(HL,[],Expl, GAS,GAS1),CN) ->
 		append(CIn,[nbf(CN)],C1),
- 		solve(T,C1,COut)
+ 		solve(T,C1,COut, [nbf(H)|GAS1],GS)
  	 ;
- 	 	solve(T,CIn,COut)
- 	).
+ 	 	solve(T,CIn,COut, [nbf(H)|GAS],GS)
+ 	)
+ 	)
+    ).
 
 /*
 solve([\+ H |T],CIn,COut) :- !,
@@ -82,56 +90,60 @@ solve([nbf(H)|T],CIn,COut) :- !,
 	 	solve(T,CIn,COut)
 	).
 */
-solve([H|T],CIn,COut):-
+solve([H|T],CIn,COut, GAS,GS):-
 	builtin(H),!,
 	call(H),
-	solve(T,CIn,COut).
+	solve(T,CIn,COut, GAS,GS).
 
-solve([H|T],CIn,COut):-
+solve([H|T],CIn,COut, GAS,GS):-
 	def_rule(H,B),
 	append(B,T,NG),
-	solve(NG,CIn,COut).
+	solve(NG,CIn,COut, GAS,GS).
 	
-solve([H|T],CIn,COut):-
-	find_rule(H,(R,S,N),B,CIn),
-	solve_pres(R,S,N,B,T,CIn,COut).
+solve([H|T],CIn,COut, GAS,GS):-
+     (member(H,GAS) -> solve(T,CIn,COut,GAS,GS)
+       ;
+	(find_rule(H,(R,S,N),B,CIn),
+	solve_pres(R,S,N,B,T,CIn,COut, [H|GAS],GS)
+	)
+     ).
 	
-solve([A,B|T],CIn,COut) :-
+solve([A,B|T],CIn,COut, GAS,GS) :-
 	A=..[R,I,Y],
 	B=..[C,Y],
-	solve_trill(someValuesFrom(R,C),I,T,CIn,COut).
+	solve_trill(someValuesFrom(R,C),I,T,CIn,COut, GAS,GS).
 
-solve([H|T],CIn,COut) :-
+solve([H|T],CIn,COut, GAS,GS) :-
 	H=..[Class,Individual],
-	solve_trill(Class,Individual,T,CIn,COut).
+	solve_trill(Class,Individual,T,CIn,COut, GAS,GS).
 
-solve([H|T],CIn,COut) :-
+solve([H|T],CIn,COut, GAS,GS) :-
 	H=..[Class,Individual],
 	owl2_model:subClassOf(SubClass,Class),
 	\+ atom(SubClass),
 	append(CIn,[trill((Class,Individual),[subClassOf(SubClass,Class)])],C1),
-	solve_trill_pres(SubClass,Individual,T,C1,COut). %%da mandare anche CIn
+	solve_trill_pres(SubClass,Individual,T,C1,COut, [instanceOf(Class,Individual)|GAS],GS). %%da mandare anche CIn
 
-solve([H|T],CIn,COut) :-
+solve([H|T],CIn,COut, GAS,GS) :-
 	H=..[Class,Individual],
 	owl2_model:equivalentClasses(L),
 	member(Class,L),
 	member(SubClass,L),
 	(\+ atom(SubClass) ->
 		(append(CIn,[trill((Class,Individual),[equivalentClasses(L)])],C1),
-		 solve_trill_pres(SubClass,Individual,T,C1,COut) %%da mandare anche CIn
+		 solve_trill_pres(SubClass,Individual,T,C1,COut, [instanceOf(Class,Individual)|GAS],GS) %%da mandare anche CIn
 		)
 	 ;
 		(SubClassAtom =.. [SubClass,Individual],
 		 append(SubClassAtom,T,NG),
 		 append(CIn,[trill((Class,Individual),[equivalentClasses(L)])],C1),
-		 solve(NG,C1,COut)
+		 solve(NG,C1,COut, [instanceOf(Class,Individual)|GAS],GS)
 		)
 	).
 
-solve([H|T],CIn,COut) :-
+solve([H|T],CIn,COut, GAS,GS) :-
 	H=..[Role,Individual1,Indovidual2],
-	solve_trill(Role,Individual1,Indovidual2,T,CIn, COut).
+	solve_trill(Role,Individual1,Indovidual2,T,CIn,COut, GAS,GS).
 
 /* **********************
 	UTILITIES
@@ -305,15 +317,15 @@ not_already_present_with_a_different_head_in_nbf(N,R,S,[L|T]) :-
 	not_already_present_with_a_different_head(N,R,S,L),
 	not_already_present_with_a_different_head_in_nbf(N,R,S,T).
 
-solve_pres(R,S,N,B,T,CIn,COut):-
+solve_pres(R,S,N,B,T,CIn,COut, GAS,GS):-
 	member_eq((N,R,S),CIn),!,
 	append(B,T,NG),
-	solve(NG,CIn,COut).
+	solve(NG,CIn,COut, GAS,GS).
 	
-solve_pres(R,S,N,B,T,CIn,COut):-
+solve_pres(R,S,N,B,T,CIn,COut, GAS,GS):-
 	append(CIn,[(N,R,S)],C1),
 	append(B,T,NG),
-	solve(NG,C1,COut).
+	solve(NG,C1,COut, GAS,GS).
 
 
 count_var([],C,C).
@@ -380,56 +392,58 @@ get_probs([_H:P|T],[P1|T1]):-
 
 /* TRILL utilities */
 % solve_trill for classAssertion queries
-solve_trill(Class,Individual,T,CIn,COut) :-
+solve_trill(Class,Individual,T,CIn,COut, GAS,GS) :-
+	member(instanceOf(Class,Individual),GAS),
 	member(trill((Class,Individual),_),CIn),!,
-	solve(T,CIn,COut).
+	solve(T,CIn,COut, [instanceOf(Class,Individual)|GAS],GS).
 	
-solve_trill(Class,Individual,T,CIn,COut) :-
+solve_trill(Class,Individual,T,CIn,COut, GAS,GS) :-
 	instanceOf_meta(Class,Individual,Explanation),
 	include(is_lp_assertion,Explanation,LPAssertions),
         maplist(lp_assertion_to_atom,LPAssertions,Atoms),
         append(Atoms,T,NG),
         append(CIn,[trill((Class,Individual),Explanation)],C1),
-        solve(NG,C1,COut).
+        solve(NG,C1,COut, [instanceOf(Class,Individual)|GAS],GS).
 
 /* per solve_trill_pres, continuare la catena */
-solve_trill(NotAtomicClass,Individual,T,CIn,COut) :-
-	solve_trill_pres(NotAtomicClass,Individual,T,CIn,COut).
+solve_trill(NotAtomicClass,Individual,T,CIn,COut, GAS,GS) :-
+	solve_trill_pres(NotAtomicClass,Individual,T,CIn,COut, [instanceOf(NotAtomicClass,Individual)|GAS],GS).
 
 % solve_trill for propertyAssertion queries
-solve_trill(Role,Individual1,Individual2,T,CIn,COut) :-
+solve_trill(Role,Individual1,Individual2,T,CIn,COut, GAS,GS) :-
+	member(propertyAssertion(Role,Individual1,Individual2),GAS)
 	member(trill((Role,Individual1,Individual2),_),CIn),!,
-	solve(T,CIn,COut).
+	solve(T,CIn,COut, [propertyAssertion(Role,Individual1,Individual2)|GAS],GS).
 	
-solve_trill(Role,Individual1,Individual2,T,CIn,COut) :-
+solve_trill(Role,Individual1,Individual2,T,CIn,COut, GAS,GS) :-
 	property_value_meta(Role,Individual1,Individual2,Explanation),
 	include(is_lp_assertion,Explanation,LPAssertions),
         maplist(lp_assertion_to_atom,LPAssertions,Atoms),
         append(Atoms,T,NG),
         append(CIn,[trill((Role,Individual1,Individual2),Explanation)],C1),
-        solve(NG,C1,COut).
+        solve(NG,C1,COut, [propertyAssertion(Role,Individual1,Individual2)|GAS],GS).
 
 % queste forse saranno da migliorare quando si calcolerà la probabilità
 % se infatti dobbiamo calcolare la probabilità di a(X,Y):-b(X,Y) ci sarà da gestire il caso di individui anonimi
 % creati dalla exists_rule
 % concept for concepts allValuesFrom
-solve_trill_pres(allValuesFrom(R,C),I,T,CIn,COut):-
+solve_trill_pres(allValuesFrom(R,C),I,T,CIn,COut, GAS,GS):-
   H=..[C,_],
   find_body(H,B,CIn,Out),
   append(CIn,Out,C1),
   B=..[D,_], %% d estendere a clausole con più congiunti nel corpo
-  solve_trill(allValuesFrom(R,D),I,T,C1,COut).
+  solve_trill(allValuesFrom(R,D),I,T,C1,COut, GAS,GS).
 
 % role for concepts allValuesFrom
-solve_trill_pres(allValuesFrom(R,C),I,T,CIn,COut):-
+solve_trill_pres(allValuesFrom(R,C),I,T,CIn,COut, GAS,GS):-
   H=..[R,_,_],
   find_body(H,B,CIn,Out),
   append(CIn,Out,C1),
   B=..[S,_,_],
-  solve_trill(allValuesFrom(S,C),I,T,C1,COut).
+  solve_trill(allValuesFrom(S,C),I,T,C1,COut, GAS,GS).
   
 % concept and role for concepts allValuesFrom
-solve_trill_pres(allValuesFrom(R,C),I,T,CIn,COut):-
+solve_trill_pres(allValuesFrom(R,C),I,T,CIn,COut, GAS,GS):-
   H=..[R,_,_],
   find_body(H,B,CIn,Out1),
   append(CIn,Out1,C1),
@@ -438,26 +452,26 @@ solve_trill_pres(allValuesFrom(R,C),I,T,CIn,COut):-
   find_body(H1,B1,CIn,Out2),
   append(C1,Out2,C2),
   B1=..[D,_],
-  solve_trill(allValuesFrom(S,D),I,T,C2,COut).
+  solve_trill(allValuesFrom(S,D),I,T,C2,COut, GAS,GS).
 
 % concept for concepts someValuesFrom
-solve_trill_pres(someValuesFrom(R,C),I,T,CIn,COut):-
+solve_trill_pres(someValuesFrom(R,C),I,T,CIn,COut, GAS,GS):-
   H=..[C,_],
   find_body(H,B,CIn,Out),
   append(CIn,Out,C1),
   B=..[D,_], %% d estendere a clausole con più congiunti nel corpo
-  solve_trill(someValuesFrom(R,D),I,T,C1,COut).
+  solve_trill(someValuesFrom(R,D),I,T,C1,COut, GAS,GS).
 
 % role for concepts someValuesFrom
-solve_trill_pres(someValuesFrom(R,C),I,T,CIn,COut):-
+solve_trill_pres(someValuesFrom(R,C),I,T,CIn,COut, GAS,GS):-
   H=..[R,_,_],
   find_body(H,B,CIn,Out),
   append(CIn,Out,C1),
   B=..[S,_,_],
-  solve_trill(someValuesFrom(S,C),I,T,C1,COut).
+  solve_trill(someValuesFrom(S,C),I,T,C1,COut, GAS,GS).
 
 % concept and role for concepts someValuesFrom
-solve_trill_pres(someValuesFrom(R,C),I,T,CIn,COut):-
+solve_trill_pres(someValuesFrom(R,C),I,T,CIn,COut, GAS,GS):-
   H=..[R,_,_],
   find_body(H,B,CIn,Out1),
   append(CIn,Out1,C1),
@@ -466,7 +480,7 @@ solve_trill_pres(someValuesFrom(R,C),I,T,CIn,COut):-
   find_body(H1,B1,CIn,Out2),
   append(C1,Out2,C2),
   B1=..[D,_],
-  solve_trill(someValuesFrom(S,D),I,T,C2,COut).
+  solve_trill(someValuesFrom(S,D),I,T,C2,COut, GAS,GS).
 
 is_lp_assertion(lpClassAssertion(_,_)).
 is_lp_assertion(lpPropertyAssertion(_,_,_)).
