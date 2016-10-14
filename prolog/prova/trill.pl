@@ -485,8 +485,9 @@ find_expls(ABoxes,E):-
 find_expls([],[_,_],[]).
 
 find_expls([ABox|_T],[C,I],E):-
-  clash(ABox,E),
-  \+ member(lpClassAssertion(C,I),E),
+  clash(ABox,E0),
+  \+ member(lpClassAssertion(C,I),E0),
+  sort(E0,E),
   (
     (member(Ax,E),
      Ax\=lpClassAssertion(_,_),

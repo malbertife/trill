@@ -9,7 +9,7 @@
 
 prob(Goal,P) :-
 	setof(Expl,find_expl([Goal],Expl),ExplDup),
-	sort(ExplDup,Expl),
+	%sort(ExplDup,Expl),
 	%write(Expl),nl,
 	%build_formula(Expl,Formula,[],Var,0,_NVars),
 	%var2numbers(Var,0,NewVar),
@@ -26,7 +26,7 @@ find_expl(GoalsList,Deriv):-
 	build_and_expand(_),
 	solve(GoalsList,[],DerivDup, [],GS),
 	%write(DerivDup),nl,
-	sort(DerivDup,Deriv),write(Deriv),nl,write(GS),nl,nl.
+	sort(DerivDup,Deriv). %,write(Deriv),nl,write(GS),nl,nl.
 	
 	
 /* solve(GoalsList,CIn,COut) takes a list of goals and an input C set
@@ -395,12 +395,13 @@ get_probs([_H:P|T],[P1|T1]):-
 solve_trill(Class,Individual,T,CIn,COut, GAS,GS) :-
 	member(instanceOf(Class,Individual),GAS),
 	member(trill((Class,Individual),_),CIn),!,
-	solve(T,CIn,COut, [instanceOf(Class,Individual)|GAS],GS).
+	solve(T,CIn,COut, GAS,GS).
 	
 solve_trill(Class,Individual,T,CIn,COut, GAS,GS) :-
 	instanceOf_meta(Class,Individual,Explanation),
 	include(is_lp_assertion,Explanation,LPAssertions),
-        maplist(lp_assertion_to_atom,LPAssertions,Atoms),
+        maplist(lp_assertion_to_atom,LPAssertions,Atoms0),
+        sort(Atoms0,Atoms),
         append(Atoms,T,NG),
         append(CIn,[trill((Class,Individual),Explanation)],C1),
         solve(NG,C1,COut, [instanceOf(Class,Individual)|GAS],GS).
@@ -411,14 +412,15 @@ solve_trill(NotAtomicClass,Individual,T,CIn,COut, GAS,GS) :-
 
 % solve_trill for propertyAssertion queries
 solve_trill(Role,Individual1,Individual2,T,CIn,COut, GAS,GS) :-
-	member(propertyAssertion(Role,Individual1,Individual2),GAS)
+	member(propertyAssertion(Role,Individual1,Individual2),GAS),
 	member(trill((Role,Individual1,Individual2),_),CIn),!,
-	solve(T,CIn,COut, [propertyAssertion(Role,Individual1,Individual2)|GAS],GS).
+	solve(T,CIn,COut, GAS,GS).
 	
 solve_trill(Role,Individual1,Individual2,T,CIn,COut, GAS,GS) :-
 	property_value_meta(Role,Individual1,Individual2,Explanation),
 	include(is_lp_assertion,Explanation,LPAssertions),
-        maplist(lp_assertion_to_atom,LPAssertions,Atoms),
+        maplist(lp_assertion_to_atom,LPAssertions,Atoms0),
+        sort(Atoms0,Atoms),
         append(Atoms,T,NG),
         append(CIn,[trill((Role,Individual1,Individual2),Explanation)],C1),
         solve(NG,C1,COut, [propertyAssertion(Role,Individual1,Individual2)|GAS],GS).
