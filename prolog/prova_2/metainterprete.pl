@@ -889,7 +889,7 @@ bdd_and_mt(Env,[],BDDX):- !,
   one(Env,BDDX).
   
 bdd_and_mt(Env,[nbf(Expl)],BDDNeg):-!,
-  build_bdd_mt(Env,[Expl],BDD2Neg),
+  build_bdd_mt(Env,Expl,BDD2Neg),
   bdd_not(Env,BDD2Neg,BDDNeg).
 
 bdd_and_mt(Env,[trill(_,Expl)],BDD):-!,
