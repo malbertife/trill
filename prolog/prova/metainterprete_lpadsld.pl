@@ -28,7 +28,7 @@ find_expl(GoalsList,Deriv):-
 	build_and_expand(_),
 	solve(GoalsList,[],DerivDup, [],GS),
 	%write(DerivDup),nl,
-	sort(DerivDup,Deriv),write(Deriv),nl,write(GS),nl,nl.
+	sort(DerivDup,Deriv). %,write(Deriv),nl,write(GS),nl,nl.
 	
 	
 /* solve(GoalsList,CIn,COut) takes a list of goals and an input C set

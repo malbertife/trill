@@ -26,7 +26,7 @@ solveNewGoals([H|T],G,GAS,GS,E):-
                 append(EH,ET,E).
 
 prob(G,Prob) :-
- findall(Ex,solve(G,Ex),Expl),%trace,
+ setof(Ex,solve(G,Ex),Expl),%trace,
  compute_prob(Expl,Prob).
 
 solve(G,Ex) :-
@@ -43,6 +43,15 @@ solve(G) :-
   solve(G,_).
  
 solvei(true,GS,GS,[]):-!.
+
+solvei(A,GAS,GAS,[]):-
+                builtin(A),!,
+                call(A).
+
+solvei((A,B),GAS,[B|GS],E):-
+                builtin(A),!,
+                call(A),
+                solvei(B,GAS,GS,E).
 
 % gestione clausole a(X):-b(X,Y),c(Y)
 solvei((A,B),GAS,GS,E):-
@@ -62,6 +71,13 @@ solvei((A,B),GAS,[B|GS],E):-!,
 
 
 solvei(nbf(Goal),GAS,GS,E):-
+                !,
+                member(nbf(Goal),GAS) ->
+                   GS = GAS, E = []
+                 ;
+                   solve_neg(Goal,GAS,GS,E).
+
+solvei(\+Goal,GAS,GS,E):-
                 !,
                 member(nbf(Goal),GAS) ->
                    GS = GAS, E = []
@@ -152,7 +168,7 @@ solvei(Goal,GAS,GS,E):-
 
 
 solve_neg(Goal,GAS,GS,E) :-
-		solvei(Goal,GAS,GS,Expl) *-> 
+		setof(Expl1,solvei(Goal,GAS,GS,Expl1),Expl) *-> 
 		  E = [nbf(Expl)]
 		 ;
 		  E = [], GS = GAS.
@@ -255,11 +271,11 @@ solveii(someValuesFrom(R,C),I,GAS,GS,E):-
 ******************************/
 
 
-find_clause(H,B,(H,B)):-
+find_clause(H,B,(H,BL)):-
 	def_rule(H,BL),
 	list2and(BL,B).
 
-find_clause(H,B,(R,N,S)):-
+find_clause(H,B,(N,R,S)):-
 	find_rule(H,(R,S,N),Body,_),
 	list2and(Body,B).
 
@@ -273,12 +289,15 @@ list2or([X],X):-
 list2or([H|T],(H ; Ta)):-!,
 	list2or(T,Ta).
 
+list2or([],true).
+
 list2and([X],X):-
 	X\=(_,_),!.
 
 list2and([H|T],(H,Ta)):-!,
 	list2and(T,Ta).
 
+list2and([],true).
 
 /* rem_dup_lists removes the C sets that are a superset of 
 another C sets further on in the list of C sets */
@@ -507,6 +526,29 @@ get_probs([],[]).
 get_probs([_H:P|T],[P1|T1]):-
 	P1 is P,
 	get_probs(T,T1).
+
+
+
+builtin(_A is _B).
+builtin(_A > _B).
+builtin(_A < _B).
+builtin(_A >= _B).
+builtin(_A =< _B).
+builtin(_A =:= _B).
+builtin(_A =\= _B).
+builtin(true).
+builtin(false).
+builtin(_A = _B).
+builtin(_A==_B).
+builtin(_A\=_B).
+builtin(_A\==_B).
+builtin(length(_L,_N)).
+builtin(member(_El,_L)).
+%builtin(average(_L,_Av)).
+builtin(max_list(_L,_Max)).
+builtin(min_list(_L,_Max)).
+builtin(nth0(_,_,_)).
+builtin(nth(_,_,_)).
 
 /* ****************************
 	PARSING INPUT FILE
@@ -847,7 +889,7 @@ bdd_and_mt(Env,[],BDDX):- !,
   one(Env,BDDX).
   
 bdd_and_mt(Env,[nbf(Expl)],BDDNeg):-!,
-  build_bdd_mt(Env,Expl,BDD2Neg),
+  build_bdd_mt(Env,[Expl],BDD2Neg),
   bdd_not(Env,BDD2Neg,BDDNeg).
 
 bdd_and_mt(Env,[trill(_,Expl)],BDD):-!,
