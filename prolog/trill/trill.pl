@@ -44,7 +44,6 @@
         owl2_model:propertyRange/2,
         owl2_model:propertyDomain/2,
         owl2_model:annotationAssertion/3,
-        owl2_model:annotationAssertion/4,
         owl2_model:exactCardinality/2,
         owl2_model:exactCardinality/3,
         owl2_model:maxCardinality/2,
@@ -72,7 +71,7 @@ load_kb(Name):-
 % loads a OWL/RDF file
 load_owl_kb(Name):-
   load_owl(Name).
-  
+
 /*****************************/
 
 /*****************************
@@ -87,20 +86,15 @@ axiom(A):-
   Name:axiom(A).
 
 build_and_expand(T):-
+  retractall(ind(_)),
   retractall(exp_found(_,_)),
   retractall(abox(_)),
   build_abox(T),
-  assert(abox([T])).
+  assert(abox([T])),
+  assert(ind(1)).
 
 instanceOf_meta(C,I,E):-
   retractall(exp_found(_,_)),
-  ( ind(Anon) -> 
-      (retractall(ind(_)),
-       NewAnon is Anon + 1)
-     ;
-       NewAnon = 1
-  ),
-  assert(ind(NewAnon)),
   abox(LABox),
   member((ABox,Tabs),LABox),
   %abox((ABox,Tabs)),
@@ -108,27 +102,20 @@ instanceOf_meta(C,I,E):-
   %findall((ABox1,Tabs1),apply_rules_0((ABox0,Tabs),(ABox1,Tabs1)),L),
   findall((ABox1,Tabs1),apply_all_rules((ABox0,Tabs),(ABox1,Tabs1)),L),
   find_expls(L,[C,I],E),
-  %delete_from(L,(classAssertion(complementOf(C),I),[]),L0),
-  %retractall(abox(_)),
-  %assert(abox(L0)),
+  delete_from(L,(classAssertion(complementOf(C),I),[]),L0),
+  retractall(abox(_)),
+  assert(abox(L0)),
   dif(E,[]).
 
 property_value_meta(R,I1,I2,E):-
   retractall(exp_found(_,_)),
-  ( ind(Anon) -> 
-      (retractall(ind(_)),
-       NewAnon is Anon + 1)
-     ;
-       NewAnon = 1
-  ),
-  assert(ind(NewAnon)),
   abox(LABox),
   member((ABox,Tabs),LABox),
   %abox((ABox,Tabs)),
   findall((ABox1,Tabs1),apply_all_rules((ABox,Tabs),(ABox1,Tabs1)),L),
   find_expls(L,[R,I1,I2],E),
-  %retractall(abox(_)),
-  %assert(abox(L)),
+  retractall(abox(_)),
+  assert(abox(L)),
   dif(E,[]).
 
 delete_from([],_,[]).
@@ -146,7 +133,7 @@ delete_from([(ABox0,Tab)|T],Q,[(ABox,Tab)|T1]):-
 
 prolog:message(iri_not_exists) -->
   [ 'IRIs not existent' ].
-  
+
 prolog:message(inconsistent) -->
   [ 'Inconsistent ABox' ].
 
@@ -196,7 +183,7 @@ instanceOf(Class,Ind,Expl):-
 
 instanceOf(Class,Ind):-
   (  check_query_args([Class,Ind],[ClassEx,IndEx]) *->
-	(  
+	(
 	  retractall(exp_found(_,_)),
 	  retractall(ind(_)),
 	  assert(ind(1)),
@@ -237,7 +224,7 @@ property_value(Prop, Ind1, Ind2,Expl):-
 
 property_value(Prop, Ind1, Ind2):-
   (  check_query_args([Prop,Ind1,Ind2],[PropEx,Ind1Ex,Ind2Ex]) *->
-	(  
+	(
 	  retractall(exp_found(_,_)),
 	  retractall(ind(_)),
 	  assert(ind(1)),
@@ -333,14 +320,14 @@ prob_instanceOf(Class,Ind,P):-
   	all_instanceOf(ClassEx,IndEx,Exps),
 %  (Exps \= [] *->
 %    build_formula(Exps,FormulaE,[],VarE),
-%    (FormulaE \= [] *-> 
+%    (FormulaE \= [] *->
 %      var2numbers(VarE,0,NewVarE),
 %      write(NewVarE),nl,write(FormulaE),
 %      compute_prob(NewVarE,FormulaE,P,0)
 %    ;
 %      P = 1)
 %  ;
-%    P = 0).  
+%    P = 0).
 %  writel(Exps),nl,
   	compute_prob(Exps,P)
   ;
@@ -352,14 +339,14 @@ prob_property_value(Prop, Ind1, Ind2,P):-
   	all_property_value(PropEx,Ind1Ex,Ind2Ex,Exps),
 %  (Exps \= [] *->
 %    build_formula(Exps,FormulaE,[],VarE),
-%    (FormulaE \= [] *-> 
+%    (FormulaE \= [] *->
 %      var2numbers(VarE,0,NewVarE),
 %      write(NewVarE),nl,write(FormulaE),
 %      compute_prob(NewVarE,FormulaE,P,0)
 %    ;
 %      P = 1)
 %  ;
-%    P = 0).  
+%    P = 0).
 %  writel(Exps),nl,
   	compute_prob(Exps,P)
   ;
@@ -371,7 +358,7 @@ prob_sub_class(Class,SupClass,P):-
   	all_sub_class(ClassEx,SupClassEx,Exps),
 %  (Exps \= [] *->
 %    build_formula(Exps,FormulaE,[],VarE),
-%    (FormulaE \= [] *-> 
+%    (FormulaE \= [] *->
 %      var2numbers(VarE,0,NewVarE),
 %      compute_prob(NewVarE,FormulaE,P,0)
 %    ;
@@ -382,16 +369,16 @@ prob_sub_class(Class,SupClass,P):-
   ;
   	P = ["IRIs not existent"],!
   ).
-  
+
 prob_unsat(Concept,P):-
   check_query_args([Concept],[ConceptEx]),
   all_unsat(ConceptEx,Exps),
   compute_prob(Exps,P).
-    
+
 prob_inconsistent_theory(P):-
   all_inconsistent_theory(Exps),
   compute_prob(Exps,P).
-  
+
 /***********
   Utilities for queries
  ***********/
@@ -408,7 +395,7 @@ all_property_value(Prop,Ind1,Ind2,LE):-
 
 all_unsat(Concept,LE):-
   findall(Expl,unsat_internal(Concept,Expl),LE).
-  
+
 
 all_inconsistent_theory(LE):-
   findall(Expl,inconsistent_theory(Expl),LE).
@@ -428,7 +415,7 @@ check_query_args_presence([H|T],Name) :-
   atomic(H),!,
   find_atom_in_axioms(Name,H),%!,
   check_query_args_presence(T,Name).
-  
+
 check_query_args_presence([H|T],Name) :-
   \+ atomic(H),!,
   H =.. [_|L],
@@ -442,16 +429,16 @@ find_atom_in_axioms(Name,H):-
   A =.. [_|L],
   flatten(L,L1),
   member(H,L1),!.
-  
+
 find_atom_in_axioms(Name,H):-
   (
-    ( 
+    (
       ( Name:class(A) ; Name:annotationProperty(A) ; Name:namedIndividual(A) ; Name:objectProperty(A) ;
         Name:dataProperty(A)
       ),
       L=[A]
     )
-   ;( 
+   ;(
       ( Name:classAssertion(A,B) ; Name:subPropertyOf(A,B) ; Name:subClassOf(A,B) ; Name:propertyRange(A,B) ;
         Name:propertyDomain(A,B) ; Name:exactCardinality(A,B) ; Name:maxCardinality(A,B) ; Name:minCardinality(A,B)
       ),
@@ -459,7 +446,7 @@ find_atom_in_axioms(Name,H):-
     )
    ;
     (
-      ( Name:propertyAssertion(A,B,C) ; Name:annotationAssertion(A,B,C) ; Name:exactCardinality(A,B,C) ; 
+      ( Name:propertyAssertion(A,B,C) ; Name:annotationAssertion(A,B,C) ; Name:exactCardinality(A,B,C) ;
         Name:maxCardinality(A,B,C) ; Name:minCardinality(A,B,C)
       ),
       L=[A,B,C]
@@ -473,8 +460,8 @@ find_atom_in_axioms(Name,H):-
    ;
     Name:intersectionOf(L)
    ;
-    Name:unionOf(L)    
-  ),  
+    Name:unionOf(L)
+  ),
   flatten(L,L1),
   member(H,L1),!.
 
@@ -525,13 +512,13 @@ find_expls([(ABox,_)|_T],[PropEx,Ind1Ex,Ind2Ex],E):-
 find_expls([_ABox|T],[PropEx,Ind1Ex,Ind2Ex],Expl):-
   \+ length(T,0),
   find_expls(T,[PropEx,Ind1Ex,Ind2Ex],Expl).
-  
+
 not_already_found([],_Q,_E):-!.
 
 not_already_found([H|_T],_Q,E):-
   subset(H,E),!,
   fail.
-  
+
 not_already_found([H|_T],Q,E):-
   subset(E,H),!,
   retract(exp_found(Q,H)).
@@ -551,7 +538,7 @@ findClassAssertion(C,Ind,[lpClassAssertion(C,Ind)],ABox):-
 	(   ground(Ind) -> true;
 	find((classAssertion(_,Ind),_),ABox)),
 	owl2_model:lpClassAssertion(C).
-	
+
 findPropertyAssertion(R,Ind1,Ind2,Expl1,ABox):-
 	find((propertyAssertion(R,Ind1,Ind2),Expl1),ABox).
 findPropertyAssertion(R,Ind1,Ind2,[lpPropertyAssertion(R,Ind1,Ind2)],ABox):-
@@ -649,13 +636,13 @@ make_expl(Ind,S,[H|T],Expl1,ABox,[Expl2|Expl]):-
 % -------------
 apply_all_rules(ABox0,ABox):-
   apply_det_rules([o_rule,and_rule,unfold_rule,add_exists_rule,forall_rule,forall_plus_rule,exists_rule,min_rule],ABox0,ABox1),
-  (ABox0=ABox1 *-> 
+  (ABox0=ABox1 *->
   ABox=ABox1;
   apply_all_rules(ABox1,ABox)).
-  
+
 apply_det_rules([],ABox0,ABox):-
   apply_nondet_rules([or_rule,max_rule],ABox0,ABox).
-  
+
 apply_det_rules([H|_],ABox0,ABox):-
   %C=..[H,ABox,ABox1],
   call(H,ABox0,ABox),!.
@@ -679,11 +666,11 @@ apply_nondet_rules([_|T],ABox0,ABox):-
 /*
 apply_all_rules(ABox0,ABox):-
   apply_nondet_rules([or_rule,max_rule],
-                  ABox0,ABox1), 
-  (ABox0=ABox1 *-> 
+                  ABox0,ABox1),
+  (ABox0=ABox1 *->
   ABox=ABox1;
   apply_all_rules(ABox1,ABox)).
-  
+
 apply_det_rules([],ABox,ABox).
 apply_det_rules([H|_],ABox0,ABox):-
   %C=..[H,ABox,ABox1],
@@ -829,17 +816,16 @@ add_exists_rule((ABox,Tabs),([(classAssertion(someValuesFrom(R,C),Ind1),Expl)|AB
   append(Expl1,Expl2,ExplT),
   list_to_set(ExplT,Expl),
   absent(classAssertion(someValuesFrom(R,C),Ind1),Expl,(ABox,Tabs)).
-  
+
 existsInKB(R,C):-
   get_trill_current_module(Name),
   Name:subClassOf(A,B),
   member(someValuesFrom(R,C),[A,B]).
-  
+
 existsInKB(R,C):-
   get_trill_current_module(Name),
   Name:equivalentClasses(L),
   member(someValuesFrom(R,C),L).
-  
 
 /* *************** */ 
 
@@ -851,7 +837,7 @@ and_rule((ABox0,Tabs0),(ABox,Tabs0)):-
   findClassAssertion(intersectionOf(LC),Ind,Expl,ABox0),
   \+ indirectly_blocked(Ind,(ABox0,Tabs0)),
   scan_and_list(LC,Ind,Expl,ABox0,Tabs0,ABox,0).
-  
+
 
 %----------------
 scan_and_list([],_Ind,_Expl,ABox,_Tabs,ABox,Mod):-
@@ -879,7 +865,7 @@ or_rule((ABox0,Tabs0),L):-
 
 not_ind_intersected_union(Ind,LC,ABox):-
   \+ ind_intersected_union(Ind,LC,ABox).
-  
+
 ind_intersected_union(Ind,LC,ABox) :-
   findClassAssertion(C,Ind,_,ABox),
   member(C,LC),!.
@@ -906,7 +892,7 @@ exists_rule((ABox0,Tabs0),([(propertyAssertion(R,Ind1,Ind2),Expl),
   \+ connected_individual(R,C,Ind1,ABox0),
   new_ind(Ind2),
   add_edge(R,Ind1,Ind2,Tabs0,Tabs).
-  
+
 
 %---------------
 connected_individual(R,C,Ind1,ABox):-
@@ -927,7 +913,7 @@ forall_rule((ABox,Tabs),([(classAssertion(C,Ind2),Expl)|ABox],Tabs)):-
   list_to_set(ExplT,Expl), %list_to_set(ExplT,ExplT1),
   %check_chain(R,Ind1,Ind2,ExplT1,ExplT1,Expl),
   absent(classAssertion(C,Ind2),Expl,(ABox,Tabs)).
-  
+
 %------------------
 check_chain(_,_,_,[],Ne,Ne):-
   !.
@@ -980,7 +966,7 @@ forall_plus_rule((ABox,Tabs),([(classAssertion(allValuesFrom(R,C),Ind2),Expl)| A
   append(ExplT,Expl3,ExplT1),
   list_to_set(ExplT1,Expl),
   absent(classAssertion(allValuesFrom(R,C),Ind2),Expl,(ABox,Tabs)).
-  
+
 % --------------
 find_sub_sup_trans_role(R,S,_Ind1,_Ind2,[subPropertyOf(R,S),transitive(R)]):-
   get_trill_current_module(Name),
@@ -1028,7 +1014,7 @@ unfold_rule((ABox0,Tabs),([(classAssertion(D,Ind),Expl)|ABox],Tabs)):-
   find_class_prop_range_domain(Ind,D,Expl,(ABox0,Tabs)),
   absent(classAssertion(D,Ind),Expl,(ABox0,Tabs)),
   add_nominal(D,Ind,ABox0,ABox).
- 
+
 /*
  * -- unfold_rule
  *    manage the negation
@@ -1039,7 +1025,7 @@ unfold_rule((ABox0,Tabs),([(classAssertion(D,Ind),[complementOf(C)|Expl])|ABox],
   find_neg_class(C,D),
   absent(classAssertion(D,Ind),[complementOf(C)|Expl],(ABox0,Tabs)),
   add_nominal(D,Ind,ABox0,ABox).
-  
+
 % ----------------
 % add_nominal
 
@@ -1059,7 +1045,7 @@ add_nominal(D,Ind,ABox0,ABox):-
     ;
    ABox = ABox0
   ).
-    
+
 % ----------------
 % unionOf, intersectionOf, subClassOf, negation, allValuesFrom, someValuesFrom, exactCardinality(min and max), maxCardinality, minCardinality
 
@@ -1121,7 +1107,7 @@ find_class_prop_range_domain(Ind,D,[propertyDomain(R,D)|ExplPA],(ABox,_Tabs)):-
   member(Ind,L),
   get_trill_current_module(Name),
   Name:propertyDomain(R,D).
-	
+
 
 %-----------------
 % subClassOf
@@ -1176,7 +1162,7 @@ find_sub_sup_class(exactCardinality(N,R,C),exactCardinality(N,S,C),subPropertyOf
 find_sub_sup_class(maxCardinality(N,R),maxCardinality(N,S),subPropertyOf(R,S)):-
   get_trill_current_module(Name),
   Name:subPropertyOf(R,S).
-  
+
 %concept for concepts maxCardinality
 find_sub_sup_class(maxCardinality(N,R,C),maxCardinality(N,R,D),subClassOf(C,D)):-
   get_trill_current_module(Name),
@@ -1191,7 +1177,7 @@ find_sub_sup_class(minCardinality(N,R,C),maxCardinality(N,S,C),subPropertyOf(R,S
 find_sub_sup_class(minCardinality(N,R),minCardinality(N,S),subPropertyOf(R,S)):-
   get_trill_current_module(Name),
   Name:subPropertyOf(R,S).
-  
+
 %concept for concepts minCardinality
 find_sub_sup_class(minCardinality(N,R,C),minCardinality(N,R,D),subClassOf(C,D)):-
   get_trill_current_module(Name),
@@ -1201,7 +1187,7 @@ find_sub_sup_class(minCardinality(N,R,C),minCardinality(N,R,D),subClassOf(C,D)):
 find_sub_sup_class(minCardinality(N,R,C),minCardinality(N,S,C),subPropertyOf(R,S)):-
   get_trill_current_module(Name),
   Name:subPropertyOf(R,S).
-  
+
 /*******************
  managing the concept (C subclassOf Thing)
  this implementation doesn't work well in a little set of cases
@@ -1293,7 +1279,7 @@ find_not_atomic(C,unionOf(L1),L1):-
 % -----------------------
 % puts together the explanations of all the concepts found by find_not_atomic/3
 find_all(_,[],_,[]).
-  
+
 find_all(Ind,[H|T],ABox,ExplT):-
   findClassAssertion(H,Ind,Expl1,ABox),
   find_all(Ind,T,ABox,Expl),
@@ -1312,7 +1298,7 @@ ce_rule((ABox0,(T,RBN,RBR)),(ABox,(T,RBN,RBR))):-
   vertices(T,Inds),
   apply_ce_to(Inds,Ax,UnAx,ABox0,ABox,(T,RBN,RBR),C),
   C @> 0.
-  
+
 
 % ------------------
 find_not_sub_sup_class(subClassOf(C,D),unionOf(complementOf(C),D)):-
@@ -1346,7 +1332,7 @@ apply_ce_to([Ind|T],Ax,UnAx,ABox0,[(classAssertion(UnAx,Ind),[Ax])|ABox],Tabs,C)
   absent(classAssertion(UnAx,Ind),[Ax],(ABox0,Tabs)),!,
   apply_ce_to(T,Ax,UnAx,ABox0,ABox,Tabs,C0),
   C is C0 + 1.
-  
+
 apply_ce_to([_Ind|T],Ax,UnAx,ABox0,ABox,Tabs,C):-
   apply_ce_to(T,Ax,UnAx,ABox0,ABox,Tabs,C).
 
@@ -1365,7 +1351,7 @@ min_rule((ABox,Tabs),([(differentIndividuals(NI),Expl)|ABox1],Tabs1)):-
   LSS @< N,
   NoI is N-LSS,
   min_rule_neigh(NoI,S,Ind1,Expl,NI,ABox,Tabs,ABox1,Tabs1).
-  
+
 
 min_rule((ABox,Tabs),([(differentIndividuals(NI),Expl)|ABox1],Tabs1)):-
   findClassAssertion(minCardinality(N,S,C),Ind1,Expl,ABox),
@@ -1379,7 +1365,7 @@ min_rule((ABox,Tabs),([(differentIndividuals(NI),Expl)|ABox1],Tabs1)):-
 
 % ----------------------
 min_rule_neigh(0,_,_,_,[],ABox,Tabs,ABox,Tabs).
-  
+
 min_rule_neigh(N,S,Ind1,Expl,[Ind2|NI],ABox,Tabs,[(propertyAssertion(S,Ind1,Ind2),Expl)|ABox2],Tabs2):-
   N > 0,
   NoI is N-1,
@@ -1387,10 +1373,10 @@ min_rule_neigh(N,S,Ind1,Expl,[Ind2|NI],ABox,Tabs,[(propertyAssertion(S,Ind1,Ind2
   add_edge(S,Ind1,Ind2,Tabs,Tabs1),
   check_block(Ind2,([(propertyAssertion(S,Ind1,Ind2),Expl)|ABox],Tabs)),
   min_rule_neigh(NoI,S,Ind1,Expl,NI,ABox,Tabs1,ABox2,Tabs2).
-  
+
 %----------------------
 min_rule_neigh_C(0,_,_,_,_,[],ABox,Tabs,ABox,Tabs).
-  
+
 min_rule_neigh_C(N,S,C,Ind1,Expl,[Ind2|NI],ABox,Tabs,[(propertyAssertion(S,Ind1,Ind2),Expl),
                                           (classAssertion(C,Ind2),[propertyAssertion(S,Ind1,Ind2)|Expl])|ABox2],Tabs2):-
   N > 0,
@@ -1399,7 +1385,7 @@ min_rule_neigh_C(N,S,C,Ind1,Expl,[Ind2|NI],ABox,Tabs,[(propertyAssertion(S,Ind1,
   add_edge(S,Ind1,Ind2,Tabs,Tabs1),
   check_block(Ind2,([(propertyAssertion(S,Ind1,Ind2),Expl)|ABox],Tabs)),
   min_rule_neigh_C(NoI,S,C,Ind1,Expl,NI,ABox,Tabs1,ABox2,Tabs2).
-  
+
 %---------------------
 safe_s_neigh([],_,_,[]).
 
@@ -1479,13 +1465,13 @@ o_rule((ABox0,Tabs0),([(sameIndividual(LI),ExplC)|ABox],Tabs)):-
   flatten([LX,LY],LI0),
   list_to_set(LI0,LI),
   absent(sameIndividual(LI),ExplC,(ABox0,Tabs0)).
-  
+
 containsCommon(L1,L2):-
   member(X,L1),
   member(X,L2),!.
 % -------------------
 
-indAsList(sameIndividual(L),L):- 
+indAsList(sameIndividual(L),L):-
   retract_sameIndividual(L),!.
 
 indAsList(X,[X]):-
@@ -1557,7 +1543,7 @@ inABoxDifferentIndividuals(X,Y,ABox):-
   find((differentIndividuals(LI),_),ABox),
   member(X,LI),
   member(Y,LI).
-				        
+
 % --------------------
 
 listIntersection([],_,[]).
@@ -1629,7 +1615,7 @@ blocked(Ind,(ABox,T)):-
 /*
 
   control for block an individual
-  
+
 */
 
 check_block(Ind,(ABox,(T,RBN,RBR))):-
@@ -1638,13 +1624,13 @@ check_block(Ind,(ABox,(T,RBN,RBR))):-
   ancestor(Ind,T,A),
   neighbours(Ind,T1,N),
   check_block1(Ind,A,N,(ABox,(T1,RBN,RBR))),!.
-  
+
 check_block(Ind,(ABox,(T,RBN,RBR))):-
   blockable(Ind,(ABox,(T,RBN,RBR))),
   transpose_ugraph(T,T1),
   neighbours(Ind,T1,N),
   check_block2(N,(ABox,(T,RBN,RBR))),!.
-  
+
 
 check_block1(Indx,A,N,(ABox,(T,RBN,RBR))):-
   member(Indx0,N),
@@ -1672,7 +1658,7 @@ indirectly_blocked(Ind,(ABox,(T,RBN,RBR))):-
   neighbours(Ind,T1,N),
   member(A,N),
   blocked(A,(ABox,(T,RBN,RBR))),!.
-  
+
 %---------------------
 /*
   An R-neighbour y of a node x is safe if
@@ -1684,7 +1670,7 @@ safe(Ind,R,(ABox,(T,RBN,RBR))):-
   rb_lookup(R,V,RBR),
   member((X,Ind),V),
   blockable(X,(ABox,(T,RBN,RBR))),!.
-  
+
 safe(Ind,R,(ABox,(T,RBN,RBR))):-
   rb_lookup(R,V,RBR),
   member((X,Ind),V),
@@ -1727,7 +1713,7 @@ writeABox((ABox,_)):-
 /*
   build_abox
   ===============
-*/        
+*/
 
 /*build_abox(ABox):-
   findall((classAssertion(Class,Individual),[classAssertion(Class,Individual)]),classAssertion(Class,Individual),LCA),
@@ -1772,7 +1758,7 @@ add_nominal_list(ABox0,(T,_,_),ABox):-
   vertices(T,NomListIn),
   prepare_nom_list(NomListIn,NomListOut),
   add_all(NomListOut,ABox0,ABox).
-  
+
 %--------------
 
 prepare_nom_list([],[]).
@@ -1809,7 +1795,7 @@ create_tabs([],G,G).
 create_tabs([(propertyAssertion(P,S,O),_Expl)|T],Tabl0,Tabl):-
   add_edge(P,S,O,Tabl0,Tabl1),
   create_tabs(T,Tabl1,Tabl).
-  
+
 create_tabs([(differentIndividuals(Ld),_Expl)|T],(T0,RBN,RBR),(T,RBN,RBR)):-
   add_vertices(T0,Ld,T).
 
@@ -1824,14 +1810,14 @@ create_tabs([(lpClassAssertion(_,I),_Expl)|Tail],(T0,RBN,RBR),(T,RBN,RBR)):-
 
 /*
   add edge to tableau
-  
+
 */
 
 add_edge(P,S,O,(T0,ItR0,RtI0),(T1,ItR1,RtI1)):-
   add_node_to_tree(P,S,O,ItR0,ItR1),
   add_role_to_tree(P,S,O,RtI0,RtI1),
   add_edge_to_tabl(P,S,O,T0,T1).
-  
+
 add_node_to_tree(P,S,O,RB0,RB1):-
   rb_lookup((S,O),V,RB0),
   \+ member(P,V),
@@ -1873,7 +1859,7 @@ graph_edge(Ind1,Ind2,T0):-
 
 %graph_edge(_,_,_).
 
-/* 
+/*
   remove edge from tableau
 */
 
@@ -1999,7 +1985,7 @@ remove_edges([],_,_,RBR,RBR).
 remove_edges([H|T],S,O,RBR0,RBR):-
   remove_role_to_tree(H,S,O,RBR0,RBR1),
   remove_edges(T,S,O,RBR1,RBR).
-	
+
 
 set_predecessor(_NN,_,[],Tabs,Tabs).
 
@@ -2055,7 +2041,7 @@ merge_abox(X,Y,Expl0,[(propertyAssertion(P,Ind1,Ind2),ExplT)|T],[(propertyAssert
   merge_abox(X,Y,Expl0,T,ABox).
 
 merge_abox(X,Y,Expl0,[H|T],[H|ABox]):-
-  merge_abox(X,Y,Expl0,T,ABox).	  
+  merge_abox(X,Y,Expl0,T,ABox).
 
 /* merge node in (ABox,Tabs) */
 
@@ -2072,14 +2058,14 @@ merge_all([(sameIndividual(H),Expl)|T],ABox0,Tabs0,ABox,Tabs):-
   delete(ABox2,(sameIndividual(L),ExplL),ABox3),
   retract_sameIndividual(L),
   merge_all(T,ABox3,Tabs1,ABox,Tabs).
-  
+
 merge_all([(sameIndividual(H),Expl)|T],ABox0,Tabs0,ABox,Tabs):-
   find_same(H,ABox0,L,_),
   L==[],!,
   merge_all2(H,ABox0,Tabs0,ABox1,Tabs1),
   add(ABox1,(sameIndividual(H),Expl),ABox2),
   merge_all(T,ABox2,Tabs1,ABox,Tabs).
-  
+
 merge_all1([],_,ABox,Tabs,ABox,Tabs).
 
 merge_all1([H|T],L,ABox0,Tabs0,ABox,Tabs):-
@@ -2108,7 +2094,7 @@ find_same(_H,_ABox,[],[]).
 
 new_abox([]).
 
- 
+
 /* add El to ABox */
 add(ABox,El,[El|ABox]).
 
@@ -2138,7 +2124,7 @@ find((Ass,Ex),A):-
 
 /*
   creation of a new individual
-  
+
 */
 new_ind(I):-
   retract(ind(I)),
@@ -2149,7 +2135,7 @@ new_ind(I):-
 
 /*
   same label for two individuals
-  
+
 */
 
 same_label(X,Y,ABox):-
@@ -2159,7 +2145,7 @@ same_label(X,Y,ABox):-
 /*
 
  different label in two individuals
- 
+
 */
 
 different_label(X,Y,ABox):-
@@ -2173,7 +2159,7 @@ different_label(X,Y,ABox):-
 
 /*
   all nodes in path from X to Y are blockable?
-  
+
 */
 
 all_node_blockable(X,Y,(ABox,(T,RBN,RBR))):-
@@ -2185,7 +2171,7 @@ all_node_blockable1([],_).
 all_node_blockable1([H|Tail],(ABox,(T,RBN,RBR))):-
   blockable(H,(ABox,(T,RBN,RBR))),
   all_node_blockable1(Tail,(ABox,(T,RBN,RBR))).
-  
+
 /*
   find a path in the graph
 */
@@ -2196,25 +2182,25 @@ graph_min_path(X,Y,T,P):-
 graph_min_path1(X,Y,T,[X,Y]):-
   member(X-L,T),
   member(Y,L).
-  
+
 graph_min_path1(X,Y,T,[X|P]):-
   member(X-L,T),
   member(Z,L),
   graph_min_path1(Z,Y,T,P).
-  
+
 min_length([H],H).
 
 min_length([H|T],MP):-
   min_length(T,P),
   length(H,N),
-  length(P,NP), 
+  length(P,NP),
   (N<NP *->
      MP= H
    ;
      MP= P).
 /*
  find all ancestor of a node
- 
+
 */
 ancestor(Ind,T,AN):-
   transpose_ugraph(T,T1),
@@ -2233,9 +2219,9 @@ ancestor1([Ind|Tail],T,A,AN):-
 
  add_all_n(L1,L2,LO)
  add in L2 all item of L1 without duplicates
- 
+
 */
- 
+
 add_all_n([],A,A).
 
 add_all_n([H|T],A,AN):-
@@ -2279,7 +2265,7 @@ s_neighbours1(Ind1,[(Ind1,Y)|T],[Y|T1]):-
 s_neighbours1(Ind1,[(X,_Y)|T],T1):-
   dif(X,Ind1),
   s_neighbours1(Ind1,T,T1).
-  
+
 s_neighbours2(_,[],[],_).
 
 s_neighbours2(SN,[H|T],[H|T1],ABox):-
@@ -2345,7 +2331,7 @@ s_predecessors2([H|T],T1,ABox):-
 
 /* *************
    Probability computation
-   
+
    ************* */
 
 /*
@@ -2376,7 +2362,7 @@ build_term([(Ax,S)|TC],F0,F,VarIn,VarOut):-!,
         Var1=VarIn
       ;
         append(VarIn,[(Ax,[])],Var1),
-        length(VarIn,NVar) 
+        length(VarIn,NVar)
       ),
       build_term(TC,[[NVar,0]|F0],F,Var1,VarOut)
     ;
@@ -2390,7 +2376,7 @@ build_term([Ax|TC],F0,F,VarIn,VarOut):-!,
       Var1=VarIn
     ;
       append(VarIn,[(Ax,[])],Var1),
-      length(VarIn,NVar) 
+      length(VarIn,NVar)
     ),
     build_term(TC,[[NVar,0]|F0],F,Var1,VarOut)
   ;
@@ -2425,21 +2411,21 @@ var2numbers([(R,_S)|T],N,[[N,2,[Prob,Prob1,0.3,0.7]]|TNV]):-
         N1 is N+1,
         var2numbers(T,N1,TNV).
 
-     
+
 compute_prob_ax(R,Prob):-
   findall(P, p(R,P),Probs),
   compute_prob_ax1(Probs,Prob).
-  
+
 compute_prob_ax1([Prob],Prob):-!.
 
 compute_prob_ax1([Prob1,Prob2],Prob):-!,
   Prob is Prob1+Prob2-(Prob1*Prob2).
-  
+
 compute_prob_ax1([Prob1 | T],Prob):-
   compute_prob_ax1(T,Prob0),
   Prob is Prob1 + Prob0 - (Prob1*Prob0).
 
-*/  
+*/
 
 /**********************
 
@@ -2447,12 +2433,12 @@ TRILL COMPUTEPROB
 
 ***********************/
 /*
-:- thread_local 
+:- thread_local
 	%get_var_n/5,
         rule_n/1,
         na/2,
         v/3.
-        
+
 %rule_n(0).
 
 compute_prob(Expl,Prob):-
@@ -2466,31 +2452,31 @@ compute_prob(Expl,Prob):-
   build_bdd(Env,Expl,BDD),
   ret_prob(Env,BDD,Prob),
   end_test(Env), !.
-  
-  
+
+
 
 build_bdd(Env,[X],BDD):- !,
   bdd_and(Env,X,BDD).
-  
+
 build_bdd(Env, [H|T],BDD):-
   build_bdd(Env,T,BDDT),
   bdd_and(Env,H,BDDH),
   or(Env,BDDH,BDDT,BDD).
-  
+
 build_bdd(Env,[],BDD):- !,
   zero(Env,BDD).
-  
-  
+
+
 bdd_and(Env,[nbf(Expl)],BDDNeg):-!,
   bdd_and(Env,Expl,BDD2Neg),
   bdd_not(Env,BDD2Neg,BDDNeg).
-  
+
 bdd_and(Env,[X],BDDX):-
   get_prob_ax(X,AxN,Prob),!,
   ProbN is 1-Prob,
   get_var_n(Env,AxN,[],[Prob,ProbN],VX),
   equality(Env,VX,0,BDDX),!.
-  
+
 bdd_and(Env,[_X],BDDX):- !,
   one(Env,BDDX).
 
@@ -2499,7 +2485,7 @@ bdd_and(Env,[nbf(Expl)|T],BDDAnd):-
   bdd_not(Env,BDD2Neg,BDDNeg),
   bdd_and(Env,T,BDDT),
   and(Env,BDDNeg,BDDT,BDDAnd).
-  
+
 bdd_and(Env,[H|T],BDDAnd):-
   get_prob_ax(H,AxN,Prob),!,
   ProbN is 1-Prob,
@@ -2507,7 +2493,7 @@ bdd_and(Env,[H|T],BDDAnd):-
   equality(Env,VH,0,BDDH),
   bdd_and(Env,T,BDDT),
   and(Env,BDDH,BDDT,BDDAnd).
-  
+
 bdd_and(Env,[_H|T],BDDAnd):- !,
   one(Env,BDDH),
   bdd_and(Env,T,BDDT),
@@ -2515,12 +2501,12 @@ bdd_and(Env,[_H|T],BDDAnd):- !,
 
 
 
-  
+
 get_var_n(Env,R,S,Probs,V):-
-  ( 
-    v(R,S,V) -> 
+  (
+    v(R,S,V) ->
       true
-    ; 
+    ;
       length(Probs,L),
       add_var(Env,L,Probs,R,V),
       assert(v(R,S,V))
@@ -2529,7 +2515,7 @@ get_var_n(Env,R,S,Probs,V):-
 
 get_prob_ax((Ax,_Ind),N,Prob):- !,
   compute_prob_ax(Ax,Prob),
-  ( na(Ax,N) -> 
+  ( na(Ax,N) ->
       true
     ;
       rule_n(N),
@@ -2539,31 +2525,31 @@ get_prob_ax((Ax,_Ind),N,Prob):- !,
       assert(rule_n(N1))
   ).
 get_prob_ax(Ax,N,Prob):- !,
-  compute_prob_ax(Ax,Prob),  
-  ( na(Ax,N) -> 
-      true 
-    ; 
+  compute_prob_ax(Ax,Prob),
+  ( na(Ax,N) ->
+      true
+    ;
       rule_n(N),
       assert(na(Ax,N)),
       retract(rule_n(N)),
       N1 is N + 1,
       assert(rule_n(N1))
   ).
-  
+
 compute_prob_ax(Ax,Prob):-
   get_trill_current_module(Name),
   findall(ProbA,(Name:annotationAssertion('https://sites.google.com/a/unife.it/ml/disponte#probability',Ax,literal(ProbAT)),atom_number(ProbAT,ProbA)),Probs),
   compute_prob_ax1(Probs,Prob).
-  
+
 compute_prob_ax1([Prob],Prob):-!.
 
 compute_prob_ax1([Prob1,Prob2],Prob):-!,
   Prob is Prob1+Prob2-(Prob1*Prob2).
-  
+
 compute_prob_ax1([Prob1 | T],Prob):-
   compute_prob_ax1(T,Prob0),
-  Prob is Prob1 + Prob0 - (Prob1*Prob0). 
-*/ 
+  Prob is Prob1 + Prob0 - (Prob1*Prob0).
+*/
 /************************/
 
 /**************/
@@ -2619,3 +2605,4 @@ sandbox:safe_primitive(trill:property_value_meta(_,_,_,_)).
 :- if(\+pengine_self(_Name)).
 :- trill.
 :- endif.
+

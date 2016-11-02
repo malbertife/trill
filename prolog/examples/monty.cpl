@@ -1,0 +1,88 @@
+
+
+% prize(A): the prize is behind door A, with A in {1,2,3}
+% selected(A): the player selects door A
+% open_door(A): Monty opens door A
+% win_keep: the player wins in case he keeps his selection
+% win_switch: the player wins in case he switches door
+
+
+prize(1):1/3; prize(2):1/3; prize(3):1/3.
+% the prize is behind each door with probability 1/3
+
+selected(1).
+% the player selected door 1
+% 
+
+open_door(A):0.5; open_door(B):0.5:- 
+  member(A,[1,2,3]),
+  member(B,[1,2,3]),
+  A<B,
+  \+ prize(A),
+  \+ prize(B),
+  \+ selected(A),
+  \+ selected(B).
+% Monty opens door A with probability 0.5 and door B with probability 0.5 if
+% A and B are different doors, the prize is not behind any of them and the
+% player did not select any of them
+
+open_door(A):-
+  member(A,[1,2,3]),
+  \+ prize(A),
+  \+ selected(A),
+  member(B,[1,2,3]),
+  prize(B),
+  \+ selected(B).
+% Monty opens door A with probability 1 if the prize is not behind it, it is
+% not selected by the player and the prize is behind another door A that is
+% not selected
+
+win_keep:- 
+  selected(A), 
+  prize(A).
+% the player keeps his choice and wins if he has selected a door with the prize
+
+win_switch:- 
+  member(A,[1,2,3]),
+  \+ selected(A), 
+  prize(A), 
+  \+ open_door(A).
+% the player switches and wins if the prize is behind the door that he has 
+% not selected and that Monty did not open
+
+/*
+per il problema monty mi aspetto le seguenti explanation:
+
+open_door(2):-		con prob 0 grazie a selected(1)
+   \+prize(2),
+   \+selected(2),
+   prize(1)
+   \+selected(1)
+
+open_door(2):-		con prob 0 perchè prize(2)
+   \+prize(2),		e \+prize(2) sono entrambi presenti
+   \+selected(2),
+   prize(2)
+   \+selected(2)
+
+open_door(2):-		con prob 0.6666*0.3333 = 0.2222
+   \+prize(2),
+   \+selected(2),
+   prize(3)
+   \+selected(3)
+
+open_door(2):-		con prob 0.5*0.6666*0.6666=
+   A=2,B=3,		        =0.5*(1-0.3333)*(1-0.3333)=
+   \+prize(2),			= 0.22222
+   \+prize(3),
+   \+selected(2)
+   \+selected(3)
+
+open_door(2):-		con prob 0.5*0.6666*0.6666*0=
+   A=1,B=2,		        =0.5*(1-0.3333)*(1-0.3333)*(1-1)
+   \+prize(1),
+   \+prize(2),
+   \+selected(1)
+   \+selected(2)
+
+*/

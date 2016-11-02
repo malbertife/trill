@@ -3,7 +3,7 @@ z(X):-w(X,Y),k(Y).
 
 subClassOf(someValuesFrom(s,e),f).
 
-s(X,Y):-r1(X,Y).
+abc(X,Y):0.9 ; s(X,Y):0.1:-r1(X,Y).
 r1(X,Y):-r2(X,Y).
 r2(X,Y):-r(X,Y).
 e(X):-d1(X).
@@ -11,6 +11,7 @@ e(X):-d1(X).
 d1(X):-d(X).
 %m(X):-d(X).
 
+%subClassOf(c,someValuesFrom(r2,d)).
 subClassOf(c,someValuesFrom(r,d)).
 
 c(X):-b(X),nbf(l(X)).
@@ -23,6 +24,6 @@ classAssertion(a,i).
 annotationAssertion('https://sites.google.com/a/unife.it/ml/disponte#probability',subClassOf(a,a1),literal('0.4')).
 annotationAssertion('https://sites.google.com/a/unife.it/ml/disponte#probability',subClassOf(a,b),literal('0.3')).
 
-owl2_model:lpClassAssertion(c).
-owl2_model:lpClassAssertion(e).
-owl2_model:lpPropertyAssertion(s).
+lpClassAssertion(c).
+lpClassAssertion(e).
+lpPropertyAssertion(s).
