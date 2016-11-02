@@ -1,0 +1,6 @@
+f(X):-s(X).
+
+s(X):-b(X).
+
+b(X):-a(X).
+classAssertion(a,i).
