@@ -20,6 +20,6 @@ b(X):-a1(X).
 a1(X):-a(X).
 classAssertion(a,i).
 
-owl2_model:lpClassAssertion(c).
-owl2_model:lpClassAssertion(e).
-owl2_model:lpPropertyAssertion(s).
+lpClassAssertion(c).
+lpClassAssertion(e).
+lpPropertyAssertion(s).

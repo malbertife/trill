@@ -21,6 +21,6 @@ b(X):-a1(X).
 a1(X):0.4;b(X):0.3:-a(X).
 classAssertion(a,i).
 
-owl2_model:lpClassAssertion(c).
-owl2_model:lpClassAssertion(e).
-owl2_model:lpPropertyAssertion(s).
+lpClassAssertion(c).
+lpClassAssertion(e).
+lpPropertyAssertion(s).
