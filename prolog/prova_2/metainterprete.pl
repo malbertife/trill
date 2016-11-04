@@ -238,6 +238,7 @@ average(L,Av):-
 	length(L,N),
 	Av is Sum/N.
 
+
 /* ****************************
 	COMPUTING PROB
    **************************** */
@@ -407,31 +408,28 @@ parse(File):-
         retractall(def_rule(_,_)),
 	retractall(rule_uniform(_,_,_,_,_,_,_,_)),
 	trill:add_kb_prefix('disponte','https://sites.google.com/a/unife.it/ml/disponte#'),
-	process_clauses(C,1).
+	process_clauses(C,1,[]).
 
-process_clauses([(end_of_file,[])],_N):-!.
+process_clauses([(end_of_file,[])],_N,LPList):-!,
+	assert_lp_axioms(LPList).
 
-process_clauses([(H,_V)|T],N):-
+process_clauses([(H,_V)|T],N,LPList):-
 	H =.. [kb_prefix,A,B],!,
 	trill:add_kb_prefix(A,B),
-	process_clauses(T,N).
+	process_clauses(T,N,LPList).
 
-process_clauses([(H,_V)|T],N):-
+process_clauses([(H,_V)|T],N,LPList):-
 	H =.. [owl_rdf,String],!,
 	owl2_model:parse_rdf_from_owl_rdf_pred(String),
-	process_clauses(T,N).
+	process_clauses(T,N,LPList).
 
-process_clauses([(H,_V)|T],N):-
+process_clauses([(H,_V)|T],N,LPList):-
 	H =.. [P|Args],
-	member(P,[class,datatype,objectProperty,dataProperty,annotationProperty,namedIndividual,subClassOf,equivalentClasses,disjointClasses,disjointUnion,subPropertyOf,equivalentProperties,
-	disjointProperties,inverseProperties,propertyDomain,propertyRange,functionalProperty,inverseFunctionalProperty,reflexiveProperty,irreflexiveProperty,symmetricProperty,asymmetricProperty,
-	transitiveProperty,hasKey,sameIndividual,differentIndividuals,classAssertion,propertyAssertion,negativePropertyAssertion,annotationAssertion,
-	lpClassAssertion,lpPropertyAssertion]),!,
+	owl2_model:is_axiom(P),!,
 	owl2_model:create_and_assert_axioms(P,Args),
-	process_clauses(T,N).
+	process_clauses(T,N,LPList).
 
-
-process_clauses([((H:-B),V)|T],N):-
+process_clauses([((H:-B),V)|T],N,LPList):-
 	H=uniform(A,P,L),!,
 	list2and(BL,B),
 	process_body(BL,V,V1),
@@ -441,12 +439,12 @@ process_clauses([((H:-B),V)|T],N):-
 	assertz(rule_by_num(N,V3,_NHN,uniform(A:1/Tot,L,Number),BL1)),
 	assertz(rule_uniform(A,N,V3,_NHU,1/Tot,L,Number,BL1)),
 	N1 is N+1,
-	process_clauses(T,N1).
+	process_clauses(T,N1,LPList).
 
-process_clauses([((H:-B),V)|T],N):-
+process_clauses([((H:-B),V)|T],N,LPList0):-
 	H=(_;_),!,
 	list2or(HL1,H),
-	process_head(HL1,HL),
+	process_head(HL1,HL,HLPList),
 	list2and(BL,B),
 	process_body(BL,V,V1),
 	length(HL,LH),
@@ -454,12 +452,13 @@ process_clauses([((H:-B),V)|T],N):-
 	assert_rules(HL,0,HL,BL,NH,N,V1),
 	assertz(rule_by_num(N,V1,NH,HL,BL)),
 	N1 is N+1,
-	process_clauses(T,N1).
+	append(LPList0,HLPList,LPList),
+	process_clauses(T,N1,LPList).
 
-process_clauses([((H:-B),V)|T],N):-
+process_clauses([((H:-B),V)|T],N,LPList0):-
 	H=(_:_),!,
 	list2or(HL1,H),
-	process_head(HL1,HL),
+	process_head(HL1,HL,HLPList),
 	list2and(BL,B),
 	process_body(BL,V,V1),
 	length(HL,LH),
@@ -467,38 +466,45 @@ process_clauses([((H:-B),V)|T],N):-
 	assert_rules(HL,0,HL,BL,NH,N,V1),
 	assertz(rule_by_num(N,V1,NH,HL,BL)),
 	N1 is N+1,
-	process_clauses(T,N1).
+	append(LPList0,HLPList,LPList),
+	process_clauses(T,N1,LPList).
 
-process_clauses([((H:-B),_V)|T],N):-!,
+process_clauses([((H:-B),_V)|T],N,LPList0):-!,
 	list2and(BL,B),
 	assert(def_rule(H,BL)),
-	process_clauses(T,N).
+	functor(H,Pred,Arity),
+	append(LPList0,[Pred/Arity],LPList),
+	process_clauses(T,N,LPList).
 
-process_clauses([(H,V)|T],N):-
+process_clauses([(H,V)|T],N,LPList0):-
 	H=(_;_),!,
 	list2or(HL1,H),
-	process_head(HL1,HL),
+	process_head(HL1,HL,HLPList),
 	length(HL,LH),
 	listN(0,LH,NH),
 	assert_rules(HL,0,HL,[],NH,N,V),
 	assertz(rule_by_num(N,V,NH,HL,[])),
 	N1 is N+1,
-	process_clauses(T,N1).
+	append(LPList0,HLPList,LPList),
+	process_clauses(T,N1,LPList).
 
-process_clauses([(H,V)|T],N):-
+process_clauses([(H,V)|T],N,LPList0):-
 	H=(_:_),!,
 	list2or(HL1,H),
-	process_head(HL1,HL),
+	process_head(HL1,HL,HLPList),
 	length(HL,LH),
 	listN(0,LH,NH),
 	assert_rules(HL,0,HL,[],NH,N,V),
 	assertz(rule_by_num(N,V,NH,HL,[])),
 	N1 is N+1,
-	process_clauses(T,N1).
+	append(LPList0,HLPList,LPList),
+	process_clauses(T,N1,LPList).
 
-process_clauses([(H,_V)|T],N):-
+process_clauses([(H,_V)|T],N,LPList0):-
 	assert(def_rule(H,[])),
-	process_clauses(T,N).
+	functor(H,Pred,Arity),
+	append(LPList0,[Pred/Arity],LPList),
+	process_clauses(T,N,LPList).
 
 
 assert_rules([],_Pos,_HL,_BL,_Nh,_N,_V1):-!.
@@ -510,15 +516,29 @@ assert_rules([H:P|T],Pos,HL,BL,NH,N,V1):-
 	Pos1 is Pos+1,
 	assert_rules(T,Pos1,HL,BL,NH,N,V1).
 
+/* asserts lpClassAssertion and lpPropertyAssertion following the clauses */
+assert_lp_axioms([]).
+
+assert_lp_axioms([P/1|T]):- !,
+	owl2_model:create_and_assert_axioms(lpClassAssertion,[P]),
+	assert_lp_axioms(T).
+
+assert_lp_axioms([P/2|T]):- !,
+	owl2_model:create_and_assert_axioms(lpPropertyAssertion,[P]),
+	assert_lp_axioms(T).
+
+assert_lp_axioms([_P/_A|T]):-
+	assert_lp_axioms(T).
+
 
 /* if the annotation in the head are not ground, the null atom is not added
 and the eventual formulas are not evaluated */
 
-process_head(HL,NHL):-
+process_head(HL,NHL,LPList):-
 	(ground_prob(HL)->
-		process_head_ground(HL,0,NHL)
+		process_head_ground(HL,0,NHL,LPList)
 	;
-		NHL=HL
+		NHL=HL,LPList=[]
 	).
 
 ground_prob([]).
@@ -527,7 +547,7 @@ ground_prob([_H:PH|T]):-
 	ground(PH),
 	ground_prob(T).
 
-process_head_ground([H:PH],P,[H:PH1|Null]):-
+process_head_ground([H:PH],P,[H:PH1|Null],[Pred/Arity]):-
 	PH1 is PH,
 	PNull is 1-P-PH1,
 	setting(epsilon,Eps),
@@ -537,12 +557,14 @@ process_head_ground([H:PH],P,[H:PH1|Null]):-
 		Null=['':PNull]
 	;
 		Null=[]
-	).
+	),
+	functor(H,Pred,Arity).
 
-process_head_ground([H:PH|T],P,[H:PH1|NT]):-
+process_head_ground([H:PH|T],P,[H:PH1|NT],[Pred/Arity|LPList]):-
 	PH1 is PH,
 	P1 is P+PH1,
-	process_head_ground(T,P1,NT).
+	functor(H,Pred,Arity),
+	process_head_ground(T,P1,NT,LPList).
 
 /* setof must have a goal of the form B^G where B is a term containing the existential variables */
 process_body([],V,V).

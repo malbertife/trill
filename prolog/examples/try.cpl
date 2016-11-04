@@ -19,11 +19,9 @@ c(X):-b(X),nbf(l(X)).
 subClassOf(a,b).
 subClassOf(a,a1).
 subClassOf(a1,b).
-classAssertion(a,i).
+a(i).
 
 annotationAssertion('https://sites.google.com/a/unife.it/ml/disponte#probability',subClassOf(a,a1),literal('0.4')).
 annotationAssertion('https://sites.google.com/a/unife.it/ml/disponte#probability',subClassOf(a,b),literal('0.3')).
 
-lpClassAssertion(c).
-lpClassAssertion(e).
-lpPropertyAssertion(s).
+

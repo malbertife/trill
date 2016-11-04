@@ -361,29 +361,35 @@ process_clauses([(end_of_file,[])],_,[]).
 process_clauses([((H:-B),V)|T],ProbAnnotAx,[r(V,HL,B)|T1]):-
 	H=(_;_),!,
 	list2or(HL1,H),
-	process_head(HL1,0,HL),
-	process_clauses(T,ProbAnnotAx,T1).
+	process_head(HL1,0,HL,HLPList),
+	manage_lp_axioms(T,HLPList,T0),
+	process_clauses(T0,ProbAnnotAx,T1).
 
 process_clauses([((H:-B),V)|T],ProbAnnotAx,[r(V,HL,B)|T1]):-
 	H=(_:_),!,
 	list2or(HL1,H),
-	process_head(HL1,0,HL),
-	process_clauses(T,ProbAnnotAx,T1).
+	process_head(HL1,0,HL,HLPList),
+	manage_lp_axioms(T,HLPList,T0),
+	process_clauses(T0,ProbAnnotAx,T1).
 
 process_clauses([((H:-B),V)|T],ProbAnnotAx,[r(V,[H:1],B)|T1]):-!,
-	process_clauses(T,ProbAnnotAx,T1).
+	functor(H,Pred,Arity),
+	manage_lp_axioms(T,[Pred/Arity],T0),
+	process_clauses(T0,ProbAnnotAx,T1).
 
 process_clauses([(H,V)|T],ProbAnnotAx,[r(V,HL,true)|T1]):-
 	H=(_;_),!,
 	list2or(HL1,H),
-	process_head(HL1,0,HL),
-	process_clauses(T,ProbAnnotAx,T1).
+	process_head(HL1,0,HL,HLPList),
+	manage_lp_axioms(T,HLPList,T0),
+	process_clauses(T0,ProbAnnotAx,T1).
 
 process_clauses([(H,V)|T],ProbAnnotAx,[r(V,HL,true)|T1]):-
 	H=(_:_),!,
 	list2or(HL1,H),
-	process_head(HL1,0,HL),
-	process_clauses(T,ProbAnnotAx,T1).
+	process_head(HL1,0,HL,HLPList),
+	manage_lp_axioms(T,HLPList,T0),
+	process_clauses(T0,ProbAnnotAx,T1).
 
 process_clauses([(H,V)|T],ProbAnnotAx,[r(V,HL)|T1]):-
 	H=..[P|_Args],
@@ -392,7 +398,31 @@ process_clauses([(H,V)|T],ProbAnnotAx,[r(V,HL)|T1]):-
 	process_clauses(T,ProbAnnotAx,T1).
 
 process_clauses([(H,V)|T],ProbAnnotAx,[r(V,[H:1],true)|T1]):-
-	process_clauses(T,ProbAnnotAx,T1).
+	functor(H,Pred,Arity),
+	manage_lp_axioms(T,[Pred/Arity],T0),
+	process_clauses(T0,ProbAnnotAx,T1).
+
+/* managess lpClassAssertion and lpPropertyAssertion following the clauses */
+manage_lp_axioms(C,LPList,NC):-
+	create_lp_axioms(LPList,NLPList),
+	add_lp_axioms(C,NLPList,NC).
+
+create_lp_axioms([],[(end_of_file,[])]).
+
+create_lp_axioms([P/1|T],[(lpClassAssertion(P),[])|T1]):- !,
+	create_lp_axioms(T,T1).
+
+create_lp_axioms([P/2|T],[(lpPropertyAssertion(P),[])|T1]):- !,
+	create_lp_axioms(T,T1).
+
+create_lp_axioms([_P/_A|T],T1):-
+	create_lp_axioms(T,T1).
+
+add_lp_axioms(T,[],T).
+
+add_lp_axioms(T,HLPList,T1):-
+	delete(T,(end_of_file,[]),T0),
+	append(T0,HLPList,T1).
 
 remove_prob_annot_ax([],[],[]).
 
@@ -402,7 +432,7 @@ remove_prob_annot_ax([(annotationAssertion('https://sites.google.com/a/unife.it/
 remove_prob_annot_ax([H|T],T1,[H|T2]):-
 	remove_prob_annot_ax(T,T1,T2).
 
-process_head([H:PH],P,[H:PH1|Null]):-
+process_head([H:PH],P,[H:PH1|Null],[Pred/Arity]):-
 	PH1 is PH,
 	PNull is 1-P-PH1,
 	setting(epsilon,Eps),
@@ -412,12 +442,14 @@ process_head([H:PH],P,[H:PH1|Null]):-
 		Null=['':PNull]
 	;
 		Null=[]
-	).
+	),
+	functor(H,Pred,Arity).
 
-process_head([H:PH|T],P,[H:PH1|NT]):-
+process_head([H:PH|T],P,[H:PH1|NT],[Pred/Arity|LPList]):-
 	PH1 is PH,
 	P1 is P+PH1,
-	process_head(T,P1,NT).
+	functor(H,Pred,Arity),
+	process_head(T,P1,NT,LPList).
 
 process_axiom(Ax,ProbAnnotAx,H):-
 	(member((Ax,ProbAT),ProbAnnotAx) ->
