@@ -93,6 +93,11 @@ build_and_expand(T):-
   assert(abox([T])),
   assert(ind(1)).
 
+
+/*****************************
+  METAINT. QUERY PREDICATES
+******************************/
+
 instanceOf_meta(C,I,E):-
   retractall(exp_found(_,_)),
   abox(LABox),
@@ -118,6 +123,7 @@ property_value_meta(R,I1,I2,E):-
   assert(abox(L)),
   dif(E,[]).
 
+% Deletes axiom form all aboxes
 delete_from([],_,[]).
 
 delete_from([(ABox0,Tab)|T],Q,[(ABox,Tab)|T1]):-
@@ -466,11 +472,9 @@ find_atom_in_axioms(Name,H):-
   member(H,L1),!.
 
 % checks if an explanations was already found
-find_expls(ABoxes,E):-
-  find_expls(ABoxes,['standard','query'],E).
+find_expls([],_,[]).
 
-find_expls([],[_,_],[]).
-
+% checks if an explanations was already found (instance_of version)
 find_expls([ABox|_T],[C,I],E):-
   clash(ABox,E0),
   \+ member(lpClassAssertion(C,I),E0),
@@ -487,13 +491,7 @@ find_expls([ABox|_T],[C,I],E):-
 	false
   ).
 
-find_expls([_ABox|T],[C,I],Expl):-
-  \+ length(T,0),
-  find_expls(T,[C,I],Expl).
-
 % checks if an explanations was already found (property_value version)
-find_expls([],[_,_,_],[]).
-
 find_expls([(ABox,_)|_T],[PropEx,Ind1Ex,Ind2Ex],E):-
   find((propertyAssertion(PropEx,Ind1Ex,Ind2Ex),E),ABox),
   \+ member(lpPropertyAssertion(PropEx,Ind1Ex,Ind2Ex),E),
@@ -509,9 +507,9 @@ find_expls([(ABox,_)|_T],[PropEx,Ind1Ex,Ind2Ex],E):-
 	false
   ).
 
-find_expls([_ABox|T],[PropEx,Ind1Ex,Ind2Ex],Expl):-
+find_expls([_ABox|T],Query,Expl):-
   \+ length(T,0),
-  find_expls(T,[PropEx,Ind1Ex,Ind2Ex],Expl).
+  find_expls(T,Query,Expl).
 
 not_already_found([],_Q,_E):-!.
 
@@ -2467,10 +2465,6 @@ build_bdd(Env,[],BDD):- !,
   zero(Env,BDD).
 
 
-bdd_and(Env,[nbf(Expl)],BDDNeg):-!,
-  bdd_and(Env,Expl,BDD2Neg),
-  bdd_not(Env,BDD2Neg,BDDNeg).
-
 bdd_and(Env,[X],BDDX):-
   get_prob_ax(X,AxN,Prob),!,
   ProbN is 1-Prob,
@@ -2480,12 +2474,6 @@ bdd_and(Env,[X],BDDX):-
 bdd_and(Env,[_X],BDDX):- !,
   one(Env,BDDX).
 
-bdd_and(Env,[nbf(Expl)|T],BDDAnd):-
-  bdd_and(Env,Expl,BDD2Neg),
-  bdd_not(Env,BDD2Neg,BDDNeg),
-  bdd_and(Env,T,BDDT),
-  and(Env,BDDNeg,BDDT,BDDAnd).
-
 bdd_and(Env,[H|T],BDDAnd):-
   get_prob_ax(H,AxN,Prob),!,
   ProbN is 1-Prob,
@@ -2493,7 +2481,7 @@ bdd_and(Env,[H|T],BDDAnd):-
   equality(Env,VH,0,BDDH),
   bdd_and(Env,T,BDDT),
   and(Env,BDDH,BDDT,BDDAnd).
-
+  
 bdd_and(Env,[_H|T],BDDAnd):- !,
   one(Env,BDDH),
   bdd_and(Env,T,BDDT),
@@ -2605,4 +2593,3 @@ sandbox:safe_primitive(trill:property_value_meta(_,_,_,_)).
 :- if(\+pengine_self(_Name)).
 :- trill.
 :- endif.
-

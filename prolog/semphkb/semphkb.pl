@@ -6,7 +6,7 @@
 	Copyright (c) 2007, Fabrizio Riguzzi
 */
 
-:-module(semlpadsld,[p/1,s/2,s/3,sc/3,set/2]).
+:-module(semlphkb,[p/1,s/2,s/3,sc/3,set/2]).
 :-use_module(library(lists)).
 :-use_module(library(apply)).
 :-dynamic setting/2.

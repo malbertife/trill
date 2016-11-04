@@ -1,30 +1,9 @@
-:- module(owl2_model, [load_owl/1, load_owl_from_string/1, query_expand/1]).
-
-
-:- multifile
-        owl2_model:classAssertion/2,
-        owl2_model:propertyAssertion/3,
-        owl2_model:subPropertyOf/2,
-        owl2_model:subClassOf/2,
-        owl2_model:equivalentClasses/1,
-        owl2_model:differentIndividuals/1,
-        owl2_model:sameIndividual/1,
-        owl2_model:intersectionOf/1,
-        owl2_model:unionOf/1,
-        owl2_model:propertyRange/2,
-        owl2_model:propertyDomain/2,
-        owl2_model:annotationAssertion/3,
-        owl2_model:exactCardinality/2,
-        owl2_model:exactCardinality/3,
-        owl2_model:maxCardinality/2,
-        owl2_model:maxCardinality/3,
-        owl2_model:minCardinality/2,
-        owl2_model:minCardinality/3.
+:- module(owl2_model, [load_owl/1, load_owl_from_string/1, expand_all_ns/3]).
 
 :- use_module(library(lists),[member/2]).
 :- use_module(library(pengines)).
-:- use_module(library(trill)).
 
+:- use_module(library(sandbox)).
 
 :- discontiguous(valid_axiom/1).
 :- discontiguous(axiompred/1).
@@ -1063,7 +1042,7 @@ referenced_description(unionOf(L),Y) :- member(X,L),referenced_description(X,Y).
 %
 % this also asserts ontologyAxiom/2, using nb_getval with current_ontology
 assert_axiom(Axiom) :-
-        assert_axiom_hook(Axiom),
+        Axiom,
         !.
 assert_axiom(Axiom) :-
         assert(Axiom),
@@ -1075,6 +1054,9 @@ assert_axiom(Axiom) :-
 %% assert_axiom(+Axiom:axiom,+Ontology:ontology) is det
 %
 % as assert_axiom/1, but also asserts to ontologyAxiom/2
+assert_axiom(Axiom,_) :-
+        Axiom,
+        !.
 assert_axiom(Axiom,O) :-
         assert(Axiom),
 	assert(ontologyAxiom(O,Axiom)),
@@ -1282,6 +1264,9 @@ We provide semi-deterministic predicates of the form
 :- use_module(library(charsio)).
 
 :- thread_local(owl/4).
+:- thread_local(owl/3).
+:- thread_local(owl/2).
+:- dynamic owl/2.
 %% blanknode(Node,Description,Used)
 % see owl_get_bnode/2
 % Node - bNodeId
@@ -1335,16 +1320,11 @@ convert(T,V,typed_value(T,V)).
 
 
 rdf_2_owl(_Base,Ont) :-
-%	debug(owl_parser, 'Removing existing owl triples',[]),
+	debug(owl_parser, 'Removing existing owl triples',[]),
 %	retractall(owl(_,_,_,Ont)),
-%  pengine_self(Self),
-%  pengine_property(Self,module(M)),
 	get_module(M),
 	debug(owl_parser,'Copying RDF triples to OWL triples for Ontology ~w',[Ont]),
-	%pengine_self(Self),
-        %pengine_property(Self,module(M)),
 	M:myrdf(X,Y,Z),
-%	owl_fix_no(X,X1), owl_fix_no(Y,Y1), owl_fix_no(Z,Z1),
 	assert(owl(X,Y,Z,Ont)), fail.
 
 rdf_2_owl(_,Ont) :-
@@ -1402,7 +1382,7 @@ test_use_owl(X1,Y1,Z1,named) :-
 	expand_ns(Y1,Y),
 	expand_ns(Z1,Z),
 	owl(X,Y,Z, not_used),
-	\+ sub_string(X,0,2,_,'__').
+	\+ sub_string(X,0,1,_,'_').
 
 
 %%       use_owl(+Triples:list)
@@ -1433,7 +1413,7 @@ use_owl(X1,Y1,Z1,named) :-
 	expand_ns(Y1,Y),
 	expand_ns(Z1,Z),
 	owl(X,Y,Z, not_used),
-	\+ sub_string(X,0,2,_,'__'),
+	\+ sub_string(X,0,1,_,'_'),
 	retract(owl(X,Y,Z, not_used)),
 	assert(owl(X,Y,Z,used2)).
 
@@ -1456,7 +1436,7 @@ use_owl(X1,Y1,Z1,named,Term) :-
 	expand_ns(Y1,Y),
 	expand_ns(Z1,Z),
 	owl(X,Y,Z, not_used),
-	\+ sub_string(X,0,2,_,'__'),
+	\+ sub_string(X,0,1,_,'_'),
 	retract(owl(X,Y,Z, not_used)),
 	assert(owl(X,Y,Z,used(Term))).
 
@@ -1557,7 +1537,7 @@ owl_collect_linked_nodes(_,_,List, List) :- !.
 %	subsequent uses of it will result in structure sharing.
 
 owl_get_bnode(Node,Description) :-
-	sub_string(Node,0,2,_,'__'),!,
+	sub_string(Node,0,1,_,'_'),!,
 	\+ blanknode(Node,_,_),
 	assert(blanknode(Node,Description, used)).
 
@@ -1682,7 +1662,7 @@ owl_canonical_parse_3([IRI|Rest]) :-
         % see email to JanW July-1-2009
         forall((test_use_owl(S,P,BNode),
                 atom(BNode),
-                sub_atom(BNode,0,2,_,'__'),
+                sub_atom(BNode,0,1,_,'_'),
                 test_use_owl(BNode,'http://www.w3.org/1999/02/22-rdf-syntax-ns#datatype',literal(_))),
                (   use_owl(S,P,BNode,datatype_fix),
                    use_owl(BNode,'http://www.w3.org/1999/02/22-rdf-syntax-ns#datatype',literal(_)),
@@ -1710,7 +1690,7 @@ owl_canonical_parse_3([IRI|Rest]) :-
 	% continue with parsing using the rules...
 	% Table 8, get the set of RIND - anonymous individuals in reification
 	findall(X, (member(Y,['owl:Axiom','owl:Annotation',
-			      'owl:AllDisjointClasses','owl:AllDisljointProperties',
+			      'owl:AllDisjointClasses','owl:AllDisjointProperties',
 			      'owl:AllDifferent','owl:NegativePropertyAssertion']),
                     test_use_owl(X,'rdf:type',Y)
                    ),
@@ -2072,7 +2052,7 @@ ann2(_,_,_,_).
 
 is_bnode(C) :-
 	atom(C),
-	sub_atom(C,0,2,_,'__').
+	sub_atom(C,0,1,_,'_').
 
 
 	% Table 11. Parsing Object Property Expressions
@@ -2824,27 +2804,79 @@ The file owl2_from_rdf.plt has some examples
 :- thread_local ns4query/1.
 
 load_owl(String):-
-  %pengine_self(Self),
-  %pengine_property(Self,module(M)),
-  %get_module(M),
+  retractall(ns4query(_)),
   open(String,read,S),
   load_owl_from_stream(S).
   
 load_owl_from_string(String):-
-  %pengine_self(Self),
-  %pengine_property(Self,module(M)),
   open_chars_stream(String,S),
   load_owl_from_stream(S).
   
 load_owl_from_stream(S):-
   get_module(M),
   process_rdf(stream(S), assert_list(M), [namespaces(NSList)]),
-  rdf_register_prefix('disponte','https://sites.google.com/a/unife.it/ml/disponte#',[keep(true)]),
-  assert(M:ns4query(NSList)),
   close(S),
+  add_kb_prefixes(NSList),
   rdf_2_owl('ont','ont'),
   owl_canonical_parse_3(['ont']),
   parse_probabilistic_annotation_assertions.
+
+% Adds a list of kb prefixes into ns4query
+add_kb_prefixes([]).
+add_kb_prefixes([(H=H1)|T]):-
+  trill:add_kb_prefix(H,H1),
+  add_kb_prefixes(T).
+
+% Adds a prefix into ns4query
+:- multifile trill:add_kb_prefix/2.
+
+trill:add_kb_prefix('',B):- !,
+  trill:add_kb_prefix([],B).
+
+trill:add_kb_prefix(A,B):-
+  ns4query(L),!,
+  (\+ member((A=_),L) ->
+      (retract(ns4query(L)),
+       append(L,[(A=B)],NL),
+       assert(ns4query(NL))
+      )
+    ;
+      true
+   ).
+trill:add_kb_prefix(A,B):-
+  assert(ns4query([(A=B)])).
+
+% Removes a prefix from ns4query
+:- multifile trill:remove_kb_prefix/2.
+trill:remove_kb_prefix(A,B):-
+  ns4query(L),!,
+  (member((A=B),L) ->
+      (retract(ns4query(L)),
+       delete(L,(A=B),NL),
+       assert(ns4query(NL))
+      )
+    ;
+      true
+   ).
+
+:- multifile trill:remove_kb_prefix/1.
+trill:remove_kb_prefix(A):-
+  ns4query(L),!,
+  (member((A=B),L) *->
+      (retract(ns4query(L)),
+       delete(L,(A=B),NL),
+       assert(ns4query(NL))
+      )
+    ;
+      (member((B=A),L),! *->
+        (retract(ns4query(L)),
+         delete(L,(B=A),NL),
+         assert(ns4query(NL))
+        )
+      ;
+        true
+     )
+   ).
 
 
 assert_list(_M,[], _):-!.
@@ -2871,6 +2903,7 @@ parse_probabilistic_annotation_assertions :-
   % annotation/3 axioms created already during owl_parse_annotated_axioms/1
   retractall(annotation(_,'https://sites.google.com/a/unife.it/ml/disponte#probability',_)).
 
+/*
 query_is([Q|_],0,Q):-!.
 query_is([_|T],N,Q):-
   NN is N - 1,
@@ -2881,13 +2914,12 @@ set_new_query([Q|T],N,NQ,[Q|NT]):-
   NN is N - 1,
   set_new_query(T,NN,NQ,NT).
 
+
 query_expand(CQ):-
   CQ =.. [CQP | CQArgs],
   member((CQP,PosQ),[(aggregate_all,1), (limit,1)]),!,
   query_is(CQArgs,PosQ,Q),
   Q =.. [P|Args],
-  %pengine_self(Self),
-  %pengine_property(Self,module(M)),
   get_module(M),
   M:ns4query(NSList),!,
   %retract(M:ns4query(NSList)),
@@ -2899,22 +2931,30 @@ query_expand(CQ):-
   
 query_expand(Q):-
   Q =.. [P|Args],
-  %pengine_self(Self),
-  %pengine_property(Self,module(M)),
   get_module(M),
   M:ns4query(NSList),!,
   %retract(M:ns4query(NSList)),
   expand_all_ns(Args,NSList,NewArgs),!,
   NQ =.. [P|NewArgs],
   call(NQ).
+*/
 
 expand_all_ns([],_,[]).
 
+expand_all_ns([P|T],NSList,[P|NewArgs]):-
+  compound(P),
+  P =.. ['literal' | _],!,
+  expand_all_ns(T,NSList,NewArgs).
+
 expand_all_ns([P|T],NSList,[NP|NewArgs]):-
   compound(P),
-  P =.. [N | [Args]],!,
-  expand_all_ns(Args,NSList,NewPArgs),
-  NP =.. [N, [NewPArgs]],
+  P =.. [N, Args],!,
+  ( is_list(Args) ->
+      expand_all_ns(Args,NSList,NewPArgs)
+    ;
+      expand_all_ns([Args],NSList,[NewPArgs])
+  ),
+  NP =.. [N, NewPArgs],
   expand_all_ns(T,NSList,NewArgs).
 
 expand_all_ns([P|T],NSList,[NP|NewArgs]):-
@@ -2939,27 +2979,101 @@ check_query_arg(Arg) :-
   flatten(L,L1),
   member(Arg,L1),!.
 
-expand_ns4query(NS_URL, [], NS_URL).
-expand_ns4query(NS_URL, [Short_NSL=Long_NSL|_],Full_URL):- 
+expand_ns4query(NS_URL,NSList, Full_URL):- 
 	nonvar(NS_URL),
 	NS_URL \= literal(_),
 	uri_split(NS_URL,Short_NS,Term, ':'),
-	Short_NS = Short_NSL,
-	Long_NS = Long_NSL,!,
-	concat_atom([Long_NS,Term],Full_URL).
+	member((Short_NS=Long_NS),NSList),
+	concat_atom([Long_NS,Term],Full_URL),!.
 
-expand_ns4query(NS_URL, [[]=Long_NSL|_],Full_URL):- 
+expand_ns4query(NS_URL,NSList, Full_URL):- 
 	nonvar(NS_URL),
 	NS_URL \= literal(_),
 	\+ sub_atom(NS_URL,_,_,_,':'),
-	Long_NS = Long_NSL,!,
-	concat_atom([Long_NS,NS_URL],Full_URL).
+	member(([]=Long_NS),NSList),
+	concat_atom([Long_NS,NS_URL],Full_URL),!.
 
-expand_ns4query(NS_URL, [_|T],Full_URL):- 
-  expand_ns4query(NS_URL, T,Full_URL),!.
-expand_ns4query(URL,_, URL).
+expand_ns4query(URL,_,URL).
+
+:- multifile trill:add_axiom/1.
+trill:add_axiom(Ax):-
+  ( ns4query(NSList) *-> true; NSList = []),
+  Ax =.. [P|Args],
+  expand_all_ns(Args,NSList,ArgsEx),
+  AxEx =.. [P|ArgsEx],
+  test_and_assert(AxEx,'ont').
+
+:- multifile trill:add_axioms/1.
+trill:add_axioms([]).
+
+trill:add_axioms([H|T]) :-
+  trill:add_axiom(H),
+  trill:add_axioms(T).
+
+:- multifile trill:remove_axiom/1.
+trill:remove_axiom(Ax):-
+  ( ns4query(NSList) *-> true; NSList = []),
+  Ax =.. [P|Args],
+  expand_all_ns(Args,NSList,ArgsEx),
+  AxEx =.. [P|ArgsEx],
+  retract(owl2_model:AxEx),
+  retract(owl2_model:owl(AxEx,'ont')).
+
+:- multifile trill:remove_axioms/1.
+trill:remove_axioms([]).
+
+trill:remove_axioms([H|T]) :-
+  trill:remove_axiom(H),
+  trill:remove_axioms(T).
+
+test_and_assert(Ax,O):-
+  (\+ owl(Ax,O) ->
+    (assert_axiom(Ax,O), assert(owl(Ax,O)))
+   ;
+    true
+  ).
 
 get_module(M):-
   pengine_self(Self),
   pengine_property(Self,module(M)),!.  
-get_module('owl2_model'):- !.
+get_module('user'):- !.
+
+:- multifile sandbox:safe_primitive/1.
+
+sandbox:safe_primitive(owl2_model:load_owl(_)).
+sandbox:safe_primitive(owl2_model:load_owl_from_string(_)).
+sandbox:safe_primitive(owl2_model:expand_all_ns(_,_,_)).
+%sandbox:safe_primitive(owl2_model:query_expand(_)).
+
+user:term_expansion((:- trill),[]):-
+  trill:add_kb_prefix('disponte','https://sites.google.com/a/unife.it/ml/disponte#').
+
+user:term_expansion(kb_prefix(A,B),[]):-
+  trill:add_kb_prefix(A,B).
+
+user:term_expansion(owl_rdf(String),[]):-
+  get_module(M),
+  open_chars_stream(String,S),
+  process_rdf(stream(S), assert_list(M), [namespaces(NSList)]),
+  close(S),
+  add_kb_prefixes(NSList),
+  rdf_2_owl('ont','ont'),
+  owl_canonical_parse_3(['ont']),
+  parse_probabilistic_annotation_assertions.
+  
+user:term_expansion(TRILLAxiom,[]):-
+  TRILLAxiom =.. [P|Args],
+  member(P, [class,datatype,objectProperty,dataProperty,annotationProperty,namedIndividual,subClassOf,equivalentClasses,disjointClasses,disjointUnion,subPropertyOf,equivalentProperties,disjointProperties,
+inverseProperties,propertyDomain,propertyRange,functionalProperty,inverseFunctionalProperty,reflexiveProperty,irreflexiveProperty,symmetricProperty,asymmetricProperty,transitiveProperty,hasKey,
+sameIndividual,differentIndividuals,classAssertion,propertyAssertion,negativePropertyAssertion,annotationAssertion]),
+  ns4query(NSList),
+  ( (length(Args,1), Args = [IntArgs], is_list(IntArgs)) -> 
+       ( expand_all_ns(IntArgs,NSList,ArgsExp),
+         NewTRILLAxiom =.. [P,ArgsExp]
+       )
+     ;
+       ( expand_all_ns(Args,NSList,ArgsExp),
+         NewTRILLAxiom =.. [P|ArgsExp]
+       )
+  ),
+  test_and_assert(NewTRILLAxiom,'ont').

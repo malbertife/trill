@@ -1,3 +1,5 @@
+:- module(metainterpreter,[prob/2,solve/2,p/1]).
+
 :- use_module('../trill/trill.pl').
 :- use_foreign_library(foreign(bddem),install).
 
@@ -5,51 +7,33 @@
 
 :- style_check(-discontiguous).
 
+:-dynamic setting/2.
 
-is_lp_assertion(lpClassAssertion(_,_)).
-is_lp_assertion(lpPropertyAssertion(_,_,_)).
-
-lp_assertion_to_atom(lpClassAssertion(Class,Individual),Atom):-
-                Atom=..[Class,Individual].
-lp_assertion_to_atom(lpPropertyAssertion(Role,Individual1, Individual2),Atom):-
-                Atom=..[Role,Individual1,Individual2].
-
-isSameIndividual(lpClassAssertion(_,Individual)):-
-                Individual=..[sameIndividual|_].
-
-solveNewGoals([],_,GS,GS,[]).
-solveNewGoals([H|T],G,GAS,GS,E):-
-                H \= G,
-                solvei(H,GAS,GSH,EH),
-                solveNewGoals(T,G,GSH,GS,ET),
-                append(EH,ET,E).
+setting(epsilon,0.00001).
+setting(ground_body,false).
 
 prob(G,Prob) :-
- setof(Ex,solve(G,Ex),Expl),%trace,
- compute_prob(Expl,Prob).
+	setof(Ex,solve(G,Ex),Expl),
+	compute_prob(Expl,Prob).
 
 solve(G,Ex) :-
-  %retractall(abox(_)),
-  build_and_expand(_),
-  %assert(abox(A)),
-  solvei(G,[],GS,E),
-  list_to_set(E,Ex).
-  %write(Ex),nl,
-  %write(GS),nl,nl.
-
+	build_and_expand(_),
+	solvei(G,[],_GS,E),
+	list_to_set(E,Ex).
+  
 solve(G) :-
-  solve(G,_).
+	solve(G,_).
 
 solvei(true,GS,GS,[]):-!.
 
 solvei(A,GAS,GAS,[]):-
-                builtin(A),!,
-                call(A).
+	builtin(A),!,
+	call(A).
 
 solvei((A,B),GAS,[B|GS],E):-
-                builtin(A),!,
-                call(A),
-                solvei(B,GAS,GS,E).
+	builtin(A),!,
+	call(A),
+	solvei(B,GAS,GS,E).
 
 % gestione clausole a(X):-b(X,Y),c(Y)
 solvei((A,B),GAS,GS,E):-
@@ -105,56 +89,6 @@ solvei(Goal,GAS,GS,E):-
                 ),
                 append(Explanation,Ex,E).
 
-/*
-solvei(Goal,GAS,GS,[subClassOf(SubClass,Class)|E]):-
-		Goal=..[Class,Individual],
-		owl2_model:subClassOf(SubClass,Class),
-		%( atom(SubClass) ->
-		%  (NewGoal=..[SubClass,Individual],
-                %   solvei(NewGoal)
-                %  )
-                %  ;
-                %  (
-                 \+ atom(SubClass),
-                   solveii(SubClass,Individual,GAS,GSI,E),
-                   GS = [subClassOf(SubClass,Class)|GSI].
-                %  )
-                %).
-solvei(Goal,GAS,GS,[equivalentClasses(L)|E]):-
-		Goal=..[Class,Individual],
-		owl2_model:equivalentClasses(L),
-		member(Class,L),
-		member(SubClass,L),
-		%( atom(SubClass) ->
-		%  (dif(Class,SubClass),
-                %   NewGoal=..[SubClass,Individual],
-                %   solvei(NewGoal)
-                %  )
-                %  ;
-                %  (
-                  \+ atom(SubClass),
-                   solveii(SubClass,Individual,GAS,GSI,E),
-                   GS = [equivalentClasses(L)|GSI].
-                %  )
-                %).
-*/
-/*
-solvei(Goal):-
-		Goal=..[Prop,I1,I2],
-		owl2_model:subPropertyOf(SubProp,Prop),
-		atom(SubProp),
-                NewGoal=..[SubProp,I1,I2],
-                solvei(NewGoal).
-solvei(Goal):-
-		Goal=..[Prop,I1,I2],
-		owl2_model:equivalentProperties(L),
-		member(Prop,L),
-		member(SubProp,L),
-		atom(SubProp),
-		dif(Prop,SubProp),
-                NewGoal=..[SubProp,I1,I2],
-                solvei(NewGoal).
-*/
 solvei(Goal,GAS,GS,E):-
 		Goal=..[Role,Individual1,Indovidual2],
 		property_value_meta(Role,Individual1,Indovidual2,Explanation),
@@ -171,129 +105,6 @@ solve_neg(Goal,GAS,GS,E) :-
 		 ;
 		  E = [], GS = GAS.
 
-%solve_neg(Goal,GAS,GS,[]) :-
-%		\+ (solvei(Goal,GAS,GS,_E)).
-
-
-% queste forse saranno da migliorare quando si calcolerà la probabilità
-% se infatti dobbiamo calcolare la probabilità di a(X,Y):-b(X,Y) ci sarà da gestire il caso di individui anonimi
-% creati dalla exists_rule
-% concept for concepts allValuesFrom
-solveii(allValuesFrom(R,C),I,GAS,GS,E):-
-  H=..[C,_],
-  find_clause(H,B,_),
-  B=..[D,_], %% d estendere a clausole con più congiunti nel corpo
-  GAST=[H|GAS],
-  ((instanceOf_meta(allValuesFrom(R,D),I,Explanation),
-                include(is_lp_assertion,Explanation,LPAssertions),
-                maplist(lp_assertion_to_atom,LPAssertions,Atoms),
-                solveNewGoals(Atoms,allValuesFrom(R,C),GAST,GSNG,Ex),
-                append(Explanation,Ex,E)
-  );
-  solveii(allValuesFrom(R,D),I,GAST,GSNG,E)),
-  GS=[allValuesFrom(R,D)|GSNG].
-
-% role for concepts allValuesFrom
-solveii(allValuesFrom(R,C),I,GAS,GS,E):-
-  H=..[R,_,_],
-  find_clause(H,B,_),
-  B=..[S,_,_],
-  GAST=[H|GAS],
-  ((instanceOf_meta(allValuesFrom(S,C),I,Explanation),
-                include(is_lp_assertion,Explanation,LPAssertions),
-                maplist(lp_assertion_to_atom,LPAssertions,Atoms),
-                solveNewGoals(Atoms,allValuesFrom(R,C),GAST,GSNG,Ex),
-                append(Explanation,Ex,E)
-  );
-  solveii(allValuesFrom(S,C),I,GAST,GSNG,E)),
-  GS=[allValuesFrom(S,C)|GSNG].
-
-% concept and role for concepts allValuesFrom
-solveii(allValuesFrom(R,C),I,GAS,GS,E):-
-  H=..[R,_,_],
-  find_clause(H,B,_),
-  B=..[S,_,_],
-  H1=..[C,_],
-  find_clause(H1,B1,_),
-  B1=..[D,_],
-  GAST=[H|GAS],
-  ((instanceOf_meta(allValuesFrom(S,D),I,Explanation),
-                include(is_lp_assertion,Explanation,LPAssertions),
-                maplist(lp_assertion_to_atom,LPAssertions,Atoms),
-                solveNewGoals(Atoms,allValuesFrom(R,C),GAST,GSNG,Ex),
-                append(Explanation,Ex,E)
-  );
-  solveii(allValuesFrom(S,D),I,GAST,GSNG,E)),
-  GS=[allValuesFrom(S,D)|GSNG].
-
-% concept for concepts someValuesFrom
-solveii(someValuesFrom(R,C),I,GAS,GS,E):-
-  H=..[C,_],
-  find_clause(H,B,_),
-  B=..[D,_], %% d estendere a clausole con più congiunti nel corpo
-  GAST=[H|GAS],
-  ((instanceOf_meta(someValuesFrom(R,D),I,Explanation),
-                include(is_lp_assertion,Explanation,LPAssertions),
-                maplist(lp_assertion_to_atom,LPAssertions,Atoms),
-                solveNewGoals(Atoms,someValuesFrom(R,C),GAST,GSNG,Ex),
-                append(Explanation,Ex,E)
-  );
-  solveii(someValuesFrom(R,D),I,GAST,GSNG,E)),
-  GS=[someValuesFrom(R,D)|GSNG].
-
-% role for concepts someValuesFrom
-solveii(someValuesFrom(R,C),I,GAS,GS,E):-
-  H=..[R,_,_],
-  find_clause(H,B,_),
-  B=..[S,_,_],
-  GAST=[H|GAS],
-  ((instanceOf_meta(someValuesFrom(S,C),I,Explanation),
-                include(is_lp_assertion,Explanation,LPAssertions),
-                maplist(lp_assertion_to_atom,LPAssertions,Atoms),
-                solveNewGoals(Atoms,someValuesFrom(R,C),GAST,GSNG,Ex),
-                append(Explanation,Ex,E)
-  );
-  solveii(someValuesFrom(S,C),I,GAST,GSNG,E)),
-  GS=[someValuesFrom(S,C)|GSNG].
-
-% concept and role for concepts someValuesFrom
-solveii(someValuesFrom(R,C),I,GAS,GS,E):-
-  H=..[R,_,_],
-  find_clause(H,B,_),
-  B=..[S,_,_],
-  H1=..[C,_],
-  find_clause(H1,B1,_),
-  B1=..[D,_],
-  GAST=[H|GAS],
-  ((instanceOf_meta(someValuesFrom(S,D),I,Explanation),
-                include(is_lp_assertion,Explanation,LPAssertions),
-                maplist(lp_assertion_to_atom,LPAssertions,Atoms),
-                solveNewGoals(Atoms,someValuesFrom(R,C),GAST,GSNG,Ex),
-                append(Explanation,Ex,E)
-  );
-  solveii(someValuesFrom(S,D),I,GAST,GSNG,E)),
-  GS=[someValuesFrom(S,D)|GSNG].
-
-/*****************************
-  IDEA:
-  - creazione ed espansione abox completa.
-  - il meta interprete prende il goal e cerca di risolverlo nel seguente ordine:
-  	1. usando LP
-  	2. usando trill (le abox create vengono salvate per usarle dopo)
-  	3. cercando subClassOf e equivalentClasses per andare da super a sub class (anche per property)
-  		devo eseguire il goal a(c) -> cerco subClassOf(b,a) -> eseguo goal b(c)
-  	4. espandere eventuali concetti complessi usando regole prolog clause/2
-  		(someValuesFrom(a,b) -> find_clause(a,e) -> risolve il goal somevalues(e,b))
-******************************/
-
-
-find_clause(H,B,(H,BL)):-
-	def_rule(H,BL),
-	list2and(BL,B).
-
-find_clause(H,B,(N,R,S)):-
-	find_rule(H,(R,S,N),Body,_),
-	list2and(Body,B).
 
 /* **********************
 	UTILITIES
@@ -315,28 +126,6 @@ list2and([H|T],(H,Ta)):-!,
 
 list2and([],true).
 
-/* rem_dup_lists removes the C sets that are a superset of
-another C sets further on in the list of C sets */
-rem_dup_lists([],L,L).
-
-rem_dup_lists([H|T],L0,L):-
-	(member_subset(H,T);member_subset(H,L0)),!,
-	rem_dup_lists(T,L0,L).
-
-rem_dup_lists([H|T],L0,L):-
-	rem_dup_lists(T,[H|L0],L).
-
-member_subset(E,[H|_T]):-
-	subset_my(H,E),!.
-
-member_subset(E,[_H|T]):-
-	member_subset(E,T).
-
-subset_my([],_).
-
-subset_my([H|T],L):-
-	member_eq(H,L),
-	subset_my(T,L).
 
 member_eq(A,[H|_T]):-
 	A==H,!.
@@ -345,95 +134,16 @@ member_eq(A,[_H|T]):-
 	member_eq(A,T).
 
 
-/* choose_clauses(CIn,LC,COut) takes as input the current C set and
-the set of C sets for a negative goal and returns a new C set that
-excludes all the derivations for the negative goals */
-choose_clauses(C,[],C).
-
-choose_clauses(CIn,[D|T],COut):-
-	member((N,R,S),D),
-	already_present_with_a_different_head(N,R,S,CIn),!,
-	choose_a_head(N,R,S,CIn,C1),
-	choose_clauses(C1,T,COut).
-
-
-choose_clauses(CIn,[D|T],COut):-
-	member((N,R,S),D),
-	new_head(N,R,S,N1),
-	\+ already_present(N1,R,S,CIn),
-	impose_dif_cons(R,S,CIn),
-	choose_clauses([(N1,R,S)|CIn],T,COut).
-
-
-/* case 1 of Select: a more general rule is present in C with
-a different head, instantiate it */
-choose_a_head(N,R,S,[(NH,R,SH)|T],[(NH,R,SH)|T]):-
-	S=SH,
-	dif(N,NH).
-
-/* case 2 of Select: a more general rule is present in C with
-a different head, ensure that they do not generate the same
-ground clause */
-choose_a_head(N,R,S,[(NH,R,SH)|T],[(NH,R,S),(NH,R,SH)|T]):-
-	\+ \+ S=SH, S\==SH,
-	dif(N,NH),
-	dif(S,SH).
-
-choose_a_head(N,R,S,[H|T],[H|T1]):-
-	choose_a_head(N,R,S,T,T1).
-
-
-/* select a head different from N for rule R with
-substitution S, return it in N1 */
-new_head(N,R,S,N1):-
-	rule_by_num(R,S,Numbers,Head,_Body),
-	Head\=uniform(_,_,_),!,
-	nth0(N, Numbers, _Elem, Rest),
-	member(N1,Rest).
-
-new_head(N,R,S,N1):-
-	rule_by_num(R,S,Numbers,uniform(_A:1/Tot,_L,_Number),_Body),
-	listN(0,Tot,Numbers),
-	nth0(N, Numbers, _Elem, Rest),
-	member(N1,Rest).
-
-already_present_with_a_different_head(N,R,S,[(NH,R,SH)|_T]):-
-	\+ \+ S=SH,NH \= N.
-
-already_present_with_a_different_head(N,R,S,[_H|T]):-
-	already_present_with_a_different_head(N,R,S,T).
-
-
-/* checks that a rule R with head N and selection S is already
-present in C (or a generalization of it is in C) */
-already_present(N,R,S,[(N,R,SH)|_T]):-
-	S=SH.
-
-already_present(N,R,S,[_H|T]):-
-	already_present(N,R,S,T).
-
-impose_dif_cons(_R,_S,[]):-!.
-
-impose_dif_cons(R,S,[(_NH,R,SH)|T]):-!,
-	dif(S,SH),
-	impose_dif_cons(R,S,T).
-
-impose_dif_cons(R,S,[_H|T]):-
-	impose_dif_cons(R,S,T).
-
-
 /* find_rule(G,(R,S,N),Body,C) takes a goal G and the current C set and
 returns the index R of a disjunctive rule resolving with G together with
 the index N of the resolving head, the substitution S and the Body of the
 rule */
 find_rule(H,(R,S,N),Body,_C):-
 	rule(H,_P,N,R,S,_,Head,Body),
-	member_head(H,Head,0,N). %,
-	%not_already_present_with_a_different_head(N,R,S,C).
+	member_head(H,Head,0,N).
 
 find_rule(H,(R,S,Number),Body,_C):-
-	rule_uniform(H,R,S,_,1/_Num,_L,Number,Body). %,
-	%not_already_present_with_a_different_head(Number,R,S,C).
+	rule_uniform(H,R,S,_,1/_Num,_L,Number,Body).
 
 member_head(H,[(H:_P)|_T],N,N).
 
@@ -470,81 +180,38 @@ not_already_present_with_a_different_head_in_nbf(N,R,S,[L|T]) :-
 	not_already_present_with_a_different_head(N,R,S,L),
 	not_already_present_with_a_different_head_in_nbf(N,R,S,T).
 
-solve_pres(R,S,N,B,T,CIn,COut, GAS,GS):-
-	member_eq((N,R,S),CIn),!,
-	append(B,T,NG),
-	solve(NG,CIn,COut, GAS,GS).
-
-solve_pres(R,S,N,B,T,CIn,COut, GAS,GS):-
-	append(CIn,[(N,R,S)],C1),
-	append(B,T,NG),
-	solve(NG,C1,COut, GAS,GS).
 
 
-count_var([],C,C).
+find_clause(H,B,(H,BL)):-
+	def_rule(H,BL),
+	list2and(BL,B).
 
-count_var([D|TD],C0,C1):-
-	length(D,NC),
-	C2 is C0+NC,
-	count_var(TD,C2,C1).
-
-build_formula([],[],Var,Var,C,C).
-
-build_formula([D|TD],[F|TF],VarIn,VarOut,C0,C1):-
-	length(D,NC),
-	C2 is C0+NC,
-	build_term(D,F,VarIn,Var1),
-	build_formula(TD,TF,Var1,VarOut,C2,C1).
-
-build_term([],[],Var,Var).
-
-build_term([(_,pruned,_)|TC],TF,VarIn,VarOut):-!,
-	build_term(TC,TF,VarIn,VarOut).
-
-build_term([(N,R,S)|TC],[[NVar,N]|TF],VarIn,VarOut):-
-	(nth0_eq(0,NVar,VarIn,(R,S))->
-		Var1=VarIn
-	;
-		append(VarIn,[(R,S)],Var1),
-		length(VarIn,NVar)
-	),
-	build_term(TC,TF,Var1,VarOut).
-
-/* nth0_eq(PosIn,PosOut,List,El) takes as input a List,
-an element El and an initial position PosIn and returns in PosOut
-the position in the List that contains an element exactly equal to El
-*/
-nth0_eq(N,N,[H|_T],El):-
-	H==El,!.
-
-nth0_eq(NIn,NOut,[_H|T],El):-
-	N1 is NIn+1,
-	nth0_eq(N1,NOut,T,El).
-
-var2numbers([],_N,[]).
-
-var2numbers([(R,S)|T],N,[[N,ValNumber,Probs]|TNV]):-
-	find_probs(R,S,Probs),
-	length(Probs,ValNumber),
-	N1 is N+1,
-	var2numbers(T,N1,TNV).
-
-find_probs(R,S,Probs):-
-	rule_by_num(R,S,_N,Head,_Body),
-	get_probs(Head,Probs).
-
-get_probs(uniform(_A:1/Num,_P,_Number),ListP):-
-	Prob is 1/Num,
-	list_el(Num,Prob,ListP).
-
-get_probs([],[]).
-
-get_probs([_H:P|T],[P1|T1]):-
-	P1 is P,
-	get_probs(T,T1).
+find_clause(H,B,(N,R,S)):-
+	find_rule(H,(R,S,N),Body,_),
+	list2and(Body,B).
 
 
+/* TRILL utilities */
+is_lp_assertion(lpClassAssertion(_,_)).
+is_lp_assertion(lpPropertyAssertion(_,_,_)).
 
+lp_assertion_to_atom(lpClassAssertion(Class,Individual),Atom):-
+                Atom=..[Class,Individual].
+lp_assertion_to_atom(lpPropertyAssertion(Role,Individual1, Individual2),Atom):-
+                Atom=..[Role,Individual1,Individual2].
+
+%isSameIndividual(lpClassAssertion(_,Individual)):-
+%                Individual=..[sameIndividual|_].
+
+solveNewGoals([],_,GS,GS,[]).
+solveNewGoals([H|T],G,GAS,GS,E):-
+                H \= G,
+                solvei(H,GAS,GSH,EH),
+                solveNewGoals(T,G,GSH,GS,ET),
+                append(EH,ET,E).
+
+
+/* built-in predicates */
 builtin(_A is _B).
 builtin(_A > _B).
 builtin(_A < _B).
@@ -560,11 +227,163 @@ builtin(_A\=_B).
 builtin(_A\==_B).
 builtin(length(_L,_N)).
 builtin(member(_El,_L)).
-%builtin(average(_L,_Av)).
+builtin(average(_L,_Av)).
 builtin(max_list(_L,_Max)).
 builtin(min_list(_L,_Max)).
 builtin(nth0(_,_,_)).
 builtin(nth(_,_,_)).
+
+average(L,Av):-
+	sum_list(L,Sum),
+	length(L,N),
+	Av is Sum/N.
+
+/* ****************************
+	COMPUTING PROB
+   **************************** */
+
+:- thread_local
+	%get_var_n/5,
+        rule_n/1,
+        na/2,
+        v/3.
+
+compute_prob(Expl,Prob):-
+  retractall(v(_,_,_)),
+  retractall(na(_,_)),
+  retractall(rule_n(_)),
+  assert(rule_n(0)),
+  findall(1,owl2_model:annotationAssertion('https://sites.google.com/a/unife.it/ml/disponte#probability',_,_),NAnnAss),
+  length(NAnnAss,NVarDL),
+  count_var(Expl,NVarDL,NV),
+  init_test(NV,Env),
+  build_bdd_mt(Env,Expl,BDD),
+  ret_prob(Env,BDD,Prob),
+  end_test(Env), !.
+
+
+
+build_bdd_mt(Env,[X],BDD):- !,
+  bdd_and_mt(Env,X,BDD).
+
+build_bdd_mt(Env, [H|T],BDD):-
+  build_bdd_mt(Env,T,BDDT),
+  bdd_and_mt(Env,H,BDDH),
+  or(Env,BDDH,BDDT,BDD).
+
+build_bdd_mt(Env,[],BDD):- !,
+  zero(Env,BDD).
+
+bdd_and_mt(Env,[],BDDX):- !,
+  one(Env,BDDX).
+
+bdd_and_mt(Env,[nbf(Expl)],BDDNeg):-!,
+  build_bdd_mt(Env,Expl,BDD2Neg),
+  bdd_not(Env,BDD2Neg,BDDNeg).
+
+bdd_and_mt(Env,[trill(_,Expl)],BDD):-!,
+  bdd_and_mt(Env,Expl,BDD).
+
+
+bdd_and_mt(Env,[X],BDDX):-
+  get_prob_ax_mt(X,AxN,H,Sub,Prob),!,
+  get_var_n(Env,AxN,Sub,Prob,VX),
+  equality(Env,VX,H,BDDX),!.
+
+bdd_and_mt(Env,[_X],BDDX):- !,
+  one(Env,BDDX).
+
+bdd_and_mt(Env,[nbf(Expl)|T],BDDAnd):-
+  build_bdd_mt(Env,Expl,BDD2Neg),
+  bdd_not(Env,BDD2Neg,BDDNeg),
+  bdd_and_mt(Env,T,BDDT),
+  and(Env,BDDNeg,BDDT,BDDAnd).
+
+bdd_and_mt(Env,[trill(_,Expl)|T],BDDAnd):-
+  bdd_and_mt(Env,Expl,BDDTrill),
+  bdd_and_mt(Env,T,BDDT),
+  and(Env,BDDTrill,BDDT,BDDAnd).
+
+bdd_and_mt(Env,[HA|T],BDDAnd):-
+  get_prob_ax_mt(HA,AxN,H,Sub,Prob),!,
+  get_var_n(Env,AxN,Sub,Prob,VH),
+  equality(Env,VH,H,BDDH),
+  bdd_and_mt(Env,T,BDDT),
+  and(Env,BDDH,BDDT,BDDAnd).
+
+bdd_and_mt(Env,[_H|T],BDDAnd):- !,
+  one(Env,BDDH),
+  bdd_and_mt(Env,T,BDDT),
+  and(Env,BDDH,BDDT,BDDAnd).
+
+
+count_var([],C,C).
+
+count_var([D|TD],C0,C1):-
+	delete(D,trill(_,_),DCleaned),
+	length(DCleaned,NC),
+	C2 is C0+NC,
+	count_var(TD,C2,C1).
+
+get_var_n(Env,R,S,Probs,V):-
+  (
+    v(R,S,V) ->
+      true
+    ;
+      length(Probs,L),
+      add_var(Env,L,Probs,R,V),
+      assert(v(R,S,V))
+  ).
+
+get_prob_ax_mt((H,R,Sub),N,H,Sub,Prob) :-
+	  rule_by_num(R,_,_,Hs,_),
+	  compute_prob_rule(Hs,Prob),
+	  ( na(R,N) ->
+	      true
+	    ;
+	      rule_n(N),
+	      assert(na(R,N)),
+	      retract(rule_n(N)),
+	      N1 is N + 1,
+	      assert(rule_n(N1))
+	  ).
+
+
+get_prob_ax_mt(Ax,N,0,[],[Prob,ProbN]):-
+	Ax \= (_,_,_),
+	compute_prob_ax(Ax,Prob),
+	ProbN is 1-Prob,
+	( na(Ax,N) ->
+		true
+	 ;
+		rule_n(N),
+		assert(na(Ax,N)),
+		retract(rule_n(N)),
+		N1 is N + 1,
+		assert(rule_n(N1))
+	).
+
+compute_prob_rule([],[]).
+
+compute_prob_rule([(_:P)|T],[P|TP]) :-
+	compute_prob_rule(T,TP).
+
+
+compute_prob_ax(Ax,Prob):-
+	findall(ProbA,(owl2_model:annotationAssertion('https://sites.google.com/a/unife.it/ml/disponte#probability',Ax,literal(ProbAT)),atom_number(ProbAT,ProbA)),Probs),
+	compute_prob_ax1(Probs,Prob).
+
+
+compute_prob_ax1([Prob],Prob):-!.
+
+compute_prob_ax1([Prob1,Prob2],Prob):-!,
+  Prob is Prob1+Prob2-(Prob1*Prob2).
+
+compute_prob_ax1([Prob1 | T],Prob):-
+  compute_prob_ax1(T,Prob0),
+  Prob is Prob1 + Prob0 - (Prob1*Prob0).
+
+/************************/
 
 /* ****************************
 	PARSING INPUT FILE
@@ -576,7 +395,7 @@ builtin(nth(_,_,_)).
 /* p(File) parses the file File.cpl. It can be called more than once without
 exiting yap */
 p(File):-
-	parse(File).
+	parse(File),!.
 
 parse(File):-
 	atom_concat(File,'.cpl',FilePl),
@@ -711,8 +530,7 @@ ground_prob([_H:PH|T]):-
 process_head_ground([H:PH],P,[H:PH1|Null]):-
 	PH1 is PH,
 	PNull is 1-P-PH1,
-	%setting(epsilon_parsing,Eps),
-	Eps = 0.00001,
+	setting(epsilon,Eps),
 	EpsNeg is - Eps,
 	PNull > EpsNeg,
 	(PNull>Eps->
@@ -790,11 +608,11 @@ delete_var(_V,[_H|T],T).
 
 /* predicates for reading in the program clauses */
 read_clauses(S,Clauses):-
-	%(setting(ground_body,true)->
-		read_clauses_ground_body(S,Clauses).
-	%;
-	%	read_clauses_exist_body(S,Clauses)
-	%).
+	(setting(ground_body,true)->
+		read_clauses_ground_body(S,Clauses)
+	;
+		read_clauses_exist_body(S,Clauses)
+	).
 
 
 read_clauses_ground_body(S,[(Cl,V)|Out]):-
@@ -816,7 +634,7 @@ read_clauses_exist_body(S,[(Cl,V)|Out]):-
 	).
 
 
-extract_vars_cl(end_of_file,[]).
+%extract_vars_cl(end_of_file,[]).
 
 extract_vars_cl(Cl,VN,Couples):-
 	(Cl=(H:-_B)->
@@ -860,165 +678,4 @@ listN(NIn,N,[NIn|T]):-
 	N1 is NIn+1,
 	listN(N1,N,T).
 /* end of predicates for parsing an input file containing a program */
-
-
-/* ****************************
-	COMPUTING PROB
-   **************************** */
-
-:- thread_local
-	%get_var_n/5,
-        rule_n/1,
-        na/2,
-        v/3.
-
-compute_prob(Expl,Prob):-
-  retractall(v(_,_,_)),
-  retractall(na(_,_)),
-  retractall(rule_n(_)),
-  assert(rule_n(0)),
-  %trill:get_trill_current_module(Name),
-  findall(1,owl2_model:annotationAssertion('https://sites.google.com/a/unife.it/ml/disponte#probability',_,_),NAnnAss),
-  length(NAnnAss,NVarDL),
-  count_var(Expl,NVarDL,NV),
-  %NV = NVarLPAD, %
-  %NV is NVarDL + NVarLPAD,
-  init_test(NV,Env),
-  build_bdd_mt(Env,Expl,BDD),
-  ret_prob(Env,BDD,Prob),
-  end_test(Env), !.
-
-
-
-build_bdd_mt(Env,[X],BDD):- !,
-  bdd_and_mt(Env,X,BDD).
-
-build_bdd_mt(Env, [H|T],BDD):-
-  build_bdd_mt(Env,T,BDDT),
-  bdd_and_mt(Env,H,BDDH),
-  or(Env,BDDH,BDDT,BDD).
-
-build_bdd_mt(Env,[],BDD):- !,
-  zero(Env,BDD).
-
-bdd_and_mt(Env,[],BDDX):- !,
-  one(Env,BDDX).
-
-bdd_and_mt(Env,[nbf(Expl)],BDDNeg):-!,
-  build_bdd_mt(Env,Expl,BDD2Neg),
-  bdd_not(Env,BDD2Neg,BDDNeg).
-
-bdd_and_mt(Env,[trill(_,Expl)],BDD):-!,
-  bdd_and_mt(Env,Expl,BDD).
-
-
-bdd_and_mt(Env,[X],BDDX):-
-  get_prob_ax_mt(X,AxN,H,Sub,Prob),!,
-  get_var_n(Env,AxN,Sub,Prob,VX),
-  equality(Env,VX,H,BDDX),!.
-
-bdd_and_mt(Env,[_X],BDDX):- !,
-  one(Env,BDDX).
-
-bdd_and_mt(Env,[nbf(Expl)|T],BDDAnd):-
-  build_bdd_mt(Env,Expl,BDD2Neg),
-  bdd_not(Env,BDD2Neg,BDDNeg),
-  bdd_and_mt(Env,T,BDDT),
-  and(Env,BDDNeg,BDDT,BDDAnd).
-
-bdd_and_mt(Env,[trill(_,Expl)|T],BDDAnd):-
-  bdd_and_mt(Env,Expl,BDDTrill),
-  bdd_and_mt(Env,T,BDDT),
-  and(Env,BDDTrill,BDDT,BDDAnd).
-
-bdd_and_mt(Env,[HA|T],BDDAnd):-
-  get_prob_ax_mt(HA,AxN,H,Sub,Prob),!,
-  get_var_n(Env,AxN,Sub,Prob,VH), % axN controllo solo la regola, no lista vuota ma sostituzione, lista prob con tutte le prob
-  equality(Env,VH,H,BDDH), % no 0 ma la testa
-  bdd_and_mt(Env,T,BDDT),
-  and(Env,BDDH,BDDT,BDDAnd).
-
-bdd_and_mt(Env,[_H|T],BDDAnd):- !,
-  one(Env,BDDH),
-  bdd_and_mt(Env,T,BDDT),
-  and(Env,BDDH,BDDT,BDDAnd).
-
-
-
-
-get_var_n(Env,R,S,Probs,V):-
-  (
-    v(R,S,V) ->
-      true
-    ;
-      length(Probs,L),
-      add_var(Env,L,Probs,R,V),
-      assert(v(R,S,V))
-  ).
-
-get_prob_ax_mt((H,R,Sub),N,H,Sub,Prob) :-%trace,
-	  rule_by_num(R,_,_,Hs,_),
-	  compute_prob_rule(Hs,Prob),
-	  ( na(R,N) ->
-	      true
-	    ;
-	      rule_n(N),
-	      assert(na(R,N)),
-	      retract(rule_n(N)),
-	      N1 is N + 1,
-	      assert(rule_n(N1))
-	  ).
-
-/*
-get_prob_ax_mt((Ax,_Ind),N,0,[],[Prob,ProbN]):- !,
-  compute_prob_ax(Ax,Prob),
-  ProbN is 1-Prob,
-  ( na(Ax,N) ->
-      true
-    ;
-      rule_n(N),
-      assert(na(Ax,N)),
-      retract(rule_n(N)),
-      N1 is N + 1,
-      assert(rule_n(N1))
-  ).
-*/
-
-get_prob_ax_mt(Ax,N,0,[],[Prob,ProbN]):-
-	Ax \= (_,_,_),
-	compute_prob_ax(Ax,Prob),
-	ProbN is 1-Prob,
-	( na(Ax,N) ->
-		true
-	 ;
-		rule_n(N),
-		assert(na(Ax,N)),
-		retract(rule_n(N)),
-		N1 is N + 1,
-		assert(rule_n(N1))
-	).
-
-compute_prob_rule([],[]).
-
-compute_prob_rule([(_:P)|T],[P|TP]) :-
-	compute_prob_rule(T,TP).
-
-
-compute_prob_ax(Ax,Prob):-
-	%trill:get_trill_current_module(Name),
-	findall(ProbA,(owl2_model:annotationAssertion('https://sites.google.com/a/unife.it/ml/disponte#probability',Ax,literal(ProbAT)),atom_number(ProbAT,ProbA)),Probs),
-	compute_prob_ax1(Probs,Prob).
-
-
-compute_prob_ax1([Prob],Prob):-!.
-
-compute_prob_ax1([Prob1,Prob2],Prob):-!,
-  Prob is Prob1+Prob2-(Prob1*Prob2).
-
-compute_prob_ax1([Prob1 | T],Prob):-
-  compute_prob_ax1(T,Prob0),
-  Prob is Prob1 + Prob0 - (Prob1*Prob0).
-
-/************************/
-
 
