@@ -1,13 +1,18 @@
 %%
 % LPAD
 %%
-Soldier(X):0.8 :- Guard(X).
+soldier(X):0.8 :- person(X),guard(X).
+person(pete).
+person(al).
+person(john).
 
 
 %%
 % KB
 %%
-owl2_model:subClassOf(allValuesFrom(commands,soldier),commander).
-owl2_model:classAssertion(guard,pete).
-owl2_model:classAssertion(guard,al).
-owl2_model:classAssertion(allValuesFrom(commands,guard),john).
+subClassOf(allValuesFrom(commands,soldier),commander).
+classAssertion(guard,pete).
+classAssertion(guard,al).
+propertyAssertion(commands,john,pete).
+propertyAssertion(commands,john,al).
+classAssertion(allValuesFrom(commands,guard),john).

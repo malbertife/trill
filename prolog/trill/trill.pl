@@ -112,6 +112,13 @@ instanceOf_meta(C,I,E):-
   assert(abox(L0)),
   dif(E,[]).
 
+find_instance(C,Ind):-
+  abox(LABox),
+  member((ABox,_Tabs),LABox),
+  %abox((ABox,Tabs)),
+  find((classAssertion(C,Ind),_Expl1),ABox).
+
+
 property_value_meta(R,I1,I2,E):-
   retractall(exp_found(_,_)),
   abox(LABox),
@@ -128,7 +135,12 @@ delete_from([],_,[]).
 
 delete_from([(ABox0,Tab)|T],Q,[(ABox,Tab)|T1]):-
   %writel(ABox0),
-  delete(ABox0,Q,ABox),
+  delete(ABox0,Q,ABox1),
+  Q=(classAssertion(CA,_),_),
+  findall((classAssertion(C,I),E),
+  	  (member((classAssertion(C,I),E),ABox1),member(CA,E)),
+  	  ToRemove),
+  subtract(ABox1,ToRemove,ABox),
   delete_from(T,Q,T1).
 
 
@@ -526,9 +538,9 @@ not_already_found([_H|T],Q,E):-
 
 /****************************/
 
-/**************
+/*****************
   FIND FUNCTIONS
-***************/
+*****************/
 
 findClassAssertion(C,Ind,Expl1,ABox):-
 	find((classAssertion(C,Ind),Expl1),ABox).
@@ -544,6 +556,45 @@ findPropertyAssertion(R,Ind1,Ind2,[lpPropertyAssertion(R,Ind1,Ind2)],ABox):-
 	find((propertyAssertion(_,Ind1,Ind2),_),ABox)),
 	owl2_model:lpPropertyAssertion(R).
 
+
+/*****************************
+  GET FUNCTIONS
+  Searches for axioms in KB
+  Used only in tableau rules
+*****************************/
+get_subClassOf(C,D):-
+  get_trill_current_module(Name),
+  Name:subClassOf(C,D).
+get_subClassOf_lp(C,D,E):-
+  atomic(C),
+  owl2_model:lpClassAssertion(D),
+  CP=..[C,_],
+  DP=..[D,_],
+  metainterpreter:find_body(DP,CP,[],E).
+
+
+get_equivalentClasses(L):-
+  get_trill_current_module(Name),
+  Name:equivalentClasses(L).
+
+get_subPropertyOf(R,S):-
+  get_trill_current_module(Name),
+  Name:subPropertyOf(R,S).
+get_subPropertyOf_lp(R,S,E):-
+  atomic(R),
+  owl2_model:lpPropertyAssertion(S),
+  RP=..[R,_,_],
+  SP=..[S,_,_],
+  metainterpreter:find_body(RP,SP,[],E).
+
+
+/**************/
+/*get_trill_current_module('translate_rdf'):-
+  pengine_self(_Name),!.*/
+%get_trill_current_module(Name):-
+%  pengine_self(Name),!.
+get_trill_current_module('owl2_model'):- !.
+/**************/
 
 /****************************
   TABLEAU ALGORITHM
@@ -563,8 +614,8 @@ find_clash((ABox0,Tabs0),Expl2):-
 %------------
 clash((ABox,_),Expl):-
   %write('clash 1'),nl,
-  findClassAssertion(C,Ind,Expl1,ABox),
-  findClassAssertion(complementOf(C),Ind,Expl2,ABox),
+  find((classAssertion(C,Ind),Expl1),ABox),
+  find((classAssertion(complementOf(C),Ind),Expl2),ABox),
   append(Expl1,Expl2,Expl).
 
 clash((ABox,_),Expl):-
@@ -580,29 +631,29 @@ clash((ABox,_),Expl):-
 
 clash((ABox,_),Expl):-
   %write('clash 3'),nl,
-  findClassAssertion(C,sameIndividual(L1),Expl1,ABox),
-  findClassAssertion(complementOf(C),sameIndividual(L2),Expl2,ABox),
+  find((classAssertion(C,sameIndividual(L1)),Expl1),ABox),
+  find((classAssertion(complementOf(C),sameIndividual(L2)),Expl2),ABox),
   member(X,L1),
   member(X,L2),!,
   append(Expl1,Expl2,Expl).
 
 clash((ABox,_),Expl):-
   %write('clash 4'),nl,
-  findClassAssertion(C,Ind1,Expl1,ABox),
-  findClassAssertion(complementOf(C),sameIndividual(L2),Expl2,ABox),
+  find((classAssertion(C,Ind1),Expl1),ABox),
+  find((classAssertion(complementOf(C),sameIndividual(L2)),Expl2),ABox),
   member(Ind1,L2),
   append(Expl1,Expl2,Expl).
 
 clash((ABox,_),Expl):-
   %write('clash 5'),nl,
-  findClassAssertion(C,sameIndividual(L1),Expl1,ABox),
-  findClassAssertion(complementOf(C),Ind2,Expl2,ABox),
+  find((classAssertion(C,sameIndividual(L1)),Expl1),ABox),
+  find((classAssertion(complementOf(C),Ind2),Expl2),ABox),
   member(Ind2,L1),
   append(Expl1,Expl2,Expl).
 
 clash((ABox,Tabs),Expl):-
   %write('clash 6'),nl,
-  findClassAssertion(maxCardinality(N,S,C),Ind,Expl1,ABox),
+  find((classAssertion(maxCardinality(N,S,C),Ind),Expl1),ABox),
   s_neighbours(Ind,S,(ABox,Tabs),SN),
   individual_class_C(SN,C,ABox,SNC),
   length(SNC,LSS),
@@ -613,7 +664,7 @@ clash((ABox,Tabs),Expl):-
 
 clash((ABox,Tabs),Expl):-
   %write('clash 7'),nl,
-  findClassAssertion(maxCardinality(N,S),Ind,Expl1,ABox),
+  find((classAssertion(maxCardinality(N,S),Ind),Expl1),ABox),
   s_neighbours(Ind,S,(ABox,Tabs),SN),
   length(SN,LSS),
   LSS @> N,
@@ -816,13 +867,11 @@ add_exists_rule((ABox,Tabs),([(classAssertion(someValuesFrom(R,C),Ind1),Expl)|AB
   absent(classAssertion(someValuesFrom(R,C),Ind1),Expl,(ABox,Tabs)).
 
 existsInKB(R,C):-
-  get_trill_current_module(Name),
-  Name:subClassOf(A,B),
+  get_subClassOf(A,B),
   member(someValuesFrom(R,C),[A,B]).
 
 existsInKB(R,C):-
-  get_trill_current_module(Name),
-  Name:equivalentClasses(L),
+  get_equivalentClasses(L),
   member(someValuesFrom(R,C),L).
 
 /* *************** */ 
@@ -968,12 +1017,12 @@ forall_plus_rule((ABox,Tabs),([(classAssertion(allValuesFrom(R,C),Ind2),Expl)| A
 % --------------
 find_sub_sup_trans_role(R,S,_Ind1,_Ind2,[subPropertyOf(R,S),transitive(R)]):-
   get_trill_current_module(Name),
-  Name:subPropertyOf(R,S),
+  get_subPropertyOf(R,S),
   Name:transitiveProperty(R).
 
 find_sub_sup_trans_role(R,S,_Ind1,_Ind2,[subPropertyOf(R,S)]):-
   get_trill_current_module(Name),
-  Name:subPropertyOf(R,S),
+  get_subPropertyOf(R,S),
   \+ Name:transitiveProperty(R).
 /* ************ */
 
@@ -1110,81 +1159,74 @@ find_class_prop_range_domain(Ind,D,[propertyDomain(R,D)|ExplPA],(ABox,_Tabs)):-
 %-----------------
 % subClassOf
 find_sub_sup_class(C,D,subClassOf(C,D)):-
-  get_trill_current_module(Name),
-  Name:subClassOf(C,D).
+  get_subClassOf(C,D).
 
 %equivalentClasses
 find_sub_sup_class(C,D,equivalentClasses(L)):-
-  get_trill_current_module(Name),
-  Name:equivalentClasses(L),
+  get_equivalentClasses(L),
   member(C,L),
   member(D,L),
   dif(C,D).
 
 %concept for concepts allValuesFrom
 find_sub_sup_class(allValuesFrom(R,C),allValuesFrom(R,D),subClassOf(C,D)):-
-  get_trill_current_module(Name),
-  Name:subClassOf(C,D).
+  get_subClassOf(C,D).
 
 %role for concepts allValuesFrom
 find_sub_sup_class(allValuesFrom(R,C),allValuesFrom(S,C),subPropertyOf(R,S)):-
-  get_trill_current_module(Name),
-  Name:subPropertyOf(R,S).
+  get_subPropertyOf(R,S).
+
+%concept for concepts allValuesFrom
+%find_sub_sup_class(allValuesFrom(R,C),allValuesFrom(R,D),lpSubClassOf(C,D,E)):-
+%  get_subClassOf_lp(C,D,E).
+
+%role for concepts allValuesFrom
+%find_sub_sup_class(allValuesFrom(R,C),allValuesFrom(S,C),lpSubPropertyOf(R,S,E)):-
+%  get_subPropertyOf_lp(R,S,E).
 
 %concept for concepts someValuesFrom
 find_sub_sup_class(someValuesFrom(R,C),someValuesFrom(R,D),subClassOf(C,D)):-
-  get_trill_current_module(Name),
-  Name:subClassOf(C,D).
+  get_subClassOf(C,D).
 
 %role for concepts someValuesFrom
 find_sub_sup_class(someValuesFrom(R,C),someValuesFrom(S,C),subPropertyOf(R,S)):-
-  get_trill_current_module(Name),
-  Name:subPropertyOf(R,S).
+  get_subPropertyOf(R,S).
 
 %role for concepts exactCardinality
 find_sub_sup_class(exactCardinality(N,R),exactCardinality(N,S),subPropertyOf(R,S)):-
-  get_trill_current_module(Name),
-  Name:subPropertyOf(R,S).
+  get_subPropertyOf(R,S).
 
 %concept for concepts exactCardinality
 find_sub_sup_class(exactCardinality(N,R,C),exactCardinality(N,R,D),subClassOf(C,D)):-
-  get_trill_current_module(Name),
-  Name:subClassOf(C,D).
+  get_subClassOf(C,D).
 
 %role for concepts exactCardinality
 find_sub_sup_class(exactCardinality(N,R,C),exactCardinality(N,S,C),subPropertyOf(R,S)):-
-  get_trill_current_module(Name),
-  Name:subPropertyOf(R,S).
+  get_subPropertyOf(R,S).
 
 %role for concepts maxCardinality
 find_sub_sup_class(maxCardinality(N,R),maxCardinality(N,S),subPropertyOf(R,S)):-
-  get_trill_current_module(Name),
-  Name:subPropertyOf(R,S).
+  get_subPropertyOf(R,S).
 
 %concept for concepts maxCardinality
 find_sub_sup_class(maxCardinality(N,R,C),maxCardinality(N,R,D),subClassOf(C,D)):-
-  get_trill_current_module(Name),
-  Name:subClassOf(C,D).
+  get_subClassOf(C,D).
 
 %role for concepts maxCardinality
-find_sub_sup_class(minCardinality(N,R,C),maxCardinality(N,S,C),subPropertyOf(R,S)):-
-  get_trill_current_module(Name),
-  Name:subPropertyOf(R,S).
+find_sub_sup_class(maxCardinality(N,R,C),maxCardinality(N,S,C),subPropertyOf(R,S)):-
+  get_subPropertyOf(R,S).
 
 %role for concepts minCardinality
 find_sub_sup_class(minCardinality(N,R),minCardinality(N,S),subPropertyOf(R,S)):-
-  get_trill_current_module(Name),
-  Name:subPropertyOf(R,S).
+  get_subPropertyOf(R,S).
 
 %concept for concepts minCardinality
 find_sub_sup_class(minCardinality(N,R,C),minCardinality(N,R,D),subClassOf(C,D)):-
-  get_trill_current_module(Name),
-  Name:subClassOf(C,D).
+  get_subClassOf(C,D).
 
 %role for concepts minCardinality
 find_sub_sup_class(minCardinality(N,R,C),minCardinality(N,S,C),subPropertyOf(R,S)):-
-  get_trill_current_module(Name),
-  Name:subPropertyOf(R,S).
+  get_subPropertyOf(R,S).
 
 /*******************
  managing the concept (C subclassOf Thing)
@@ -1241,14 +1283,12 @@ find_sub_sup_class(C,'Thing',subClassOf(C,'Thing')):-
 %--------------------
 % looks for not atomic concepts descriptions containing class C
 find_not_atomic(C,intersectionOf(L1),L1):-
-  get_trill_current_module(Name),
-  Name:subClassOf(A,B),
+  get_subClassOf(A,B),
   member(intersectionOf(L1),[A,B]),
   member(C,L1).
 
 find_not_atomic(C,unionOf(L1),L1):-
-  get_trill_current_module(Name),
-  Name:subClassOf(A,B),
+  get_subClassOf(A,B),
   member(unionOf(L1),[A,B]),
   member(C,L1).
 
@@ -1263,14 +1303,12 @@ find_not_atomic(C,unionOf(L),L):-
   member(C,L).
 
 find_not_atomic(C,intersectionOf(L1),L1):-
-  get_trill_current_module(Name),
-  Name:equivalentClasses(L),
+  get_equivalentClasses(L),
   member(intersectionOf(L1),L),
   member(C,L1).
 
 find_not_atomic(C,unionOf(L1),L1):-
-  get_trill_current_module(Name),
-  Name:equivalentClasses(L),
+  get_equivalentClasses(L),
   member(unionOf(L1),L),
   member(C,L1).
 
@@ -1300,14 +1338,12 @@ ce_rule((ABox0,(T,RBN,RBR)),(ABox,(T,RBN,RBR))):-
 
 % ------------------
 find_not_sub_sup_class(subClassOf(C,D),unionOf(complementOf(C),D)):-
-  get_trill_current_module(Name),
-  Name:subClassOf(C,D),
+  get_subClassOf(C,D),
   \+ atomic(C).
 
 
 find_not_sub_sup_class(equivalentClasses(L),unionOf(L1)):-
-  get_trill_current_module(Name),
-  Name:equivalentClasses(L),
+  get_equivalentClasses(L),
   member(C,L),
   \+ atomic(C),
   copy_neg_c(C,L,L1).
@@ -1722,6 +1758,7 @@ writeABox((ABox,_)):-
   add_all(LPA,ABox1,ABox2),
   add_all(LSPA,ABox2,ABox).
 */
+%% NON USO GET FUNCTIONS
 
 build_abox((ABox,Tabs)):-
   get_trill_current_module(Name),
@@ -2539,14 +2576,6 @@ compute_prob_ax1([Prob1 | T],Prob):-
   Prob is Prob1 + Prob0 - (Prob1*Prob0).
 */
 /************************/
-
-/**************/
-/*get_trill_current_module('translate_rdf'):-
-  pengine_self(_Name),!.*/
-%get_trill_current_module(Name):-
-%  pengine_self(Name),!.
-get_trill_current_module('owl2_model'):- !.
-/**************/
 
 :- multifile sandbox:safe_primitive/1.
 /*

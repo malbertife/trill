@@ -47,7 +47,7 @@ solve([\+ H |T],CIn,COut, GAS,GS) :- !,
     (member(nbf(H),GAS) -> solve(T,CIn,COut, GAS,GS)
         ;
 	(list2and(HL,H),
-	(setof(Expl,solve(HL,[],Expl, GAS,GAS1),CN) ->
+	(setof(Expl,solve(HL,[],Expl, GAS,GAS1),CN) -> %% GAS1 da gestire meglio
 		append(CIn,[nbf(CN)],C1),
 		solve(T,C1,COut, [nbf(H)|GAS1],GS)
 	 ;
@@ -91,10 +91,18 @@ solve([H|T],CIn,COut, GAS,GS):-
 	)
      ).
 
+/*
 solve([A,B|T],CIn,COut, GAS,GS) :-
 	A=..[R,I,Y],
 	B=..[C,Y],
 	solve_trill(someValuesFrom(R,C),I,T,CIn,COut, GAS,GS).
+
+
+solve([A,B|T],CIn,COut, GAS,GS) :-
+	B=..[R,I,Y],
+	A=..[C,Y],
+	solve_trill(someValuesFrom(R,C),I,T,CIn,COut, GAS,GS).
+*/
 
 solve([H|T],CIn,COut, GAS,GS) :-
 	H=..[Class,Individual],
@@ -103,6 +111,26 @@ solve([H|T],CIn,COut, GAS,GS) :-
 solve([H|T],CIn,COut, GAS,GS) :-
 	H=..[Role,Individual1,Indovidual2],
 	solve_trill(Role,Individual1,Indovidual2,T,CIn,COut, GAS,GS).
+
+
+solve([H|T],CIn,COut, GAS,GS) :-
+	H=..[Class,Individual],
+	(member(instanceOf(Class,Individual),GAS) -> solve(T,CIn,COut,GAS,GS)
+	 ;
+	  (owl2_model:subClassOf(SubClass,Class),
+	   append(CIn,[subClassOf(SubClass,Class)],C1),
+	   (atom(SubClass) ->
+		(SubClassAtom =.. [SubClass,Individual],
+		 append([SubClassAtom],T,NG),
+		 solve(NG,C1,COut,[instanceOf(Class,Individual)|GAS],GS)
+		)
+	    ;
+	 	solve_not_atomic_concept([(SubClass,Individual)|T],C1,COut,[instanceOf(Class,Individual)|GAS],GS)
+	   )
+	  )
+	).
+	
+
 
 /* **********************
 	UTILITIES
@@ -189,47 +217,98 @@ solve_pres(R,S,N,B,T,CIn,COut, GAS,GS):-
 % solve_trill for classAssertion queries
 solve_trill(Class,Individual,T,CIn,COut, GAS,GS) :-
 	member(instanceOf(Class,Individual),GAS),
-	member(trill((Class,Individual),_),CIn),!,
+	%member(trill((Class,Individual),_),CIn),
+	!,
 	solve(T,CIn,COut, GAS,GS).
 
+/*
 solve_trill(Class,Individual,T,CIn,COut, GAS,GS) :-
 	instanceOf_meta(Class,Individual,Explanation),
+	include(is_lp_subsumption,Explanation,LPSubsumptions),
+	maplist(lp_subsumption_to_atom,LPSubsumptions,AtomsSub),
+	solve_all(AtomsSub,GAS,GAS1,CN),
 	include(is_lp_assertion,Explanation,LPAssertions),
         maplist(lp_assertion_to_atom,LPAssertions,Atoms0),
         sort(Atoms0,Atoms),
         append(Atoms,T,NG),
-        append(CIn,[trill((Class,Individual),Explanation)],C1),
-        solve(NG,C1,COut, [instanceOf(Class,Individual)|GAS],GS).
+        append(CIn,CN,C0),
+        append(C0,[trill((Class,Individual),Explanation)],C1),
+        solve(NG,C1,COut, [instanceOf(Class,Individual)|GAS1],GS).
+*/
+
+solve_trill(Class,Individual,T,CIn,COut, GAS,GS) :-
+	instanceOf_meta(Class,Individual,Explanation0),
+	include(is_lp_assertion,Explanation0,LPAssertions),
+        maplist(lp_assertion_to_atom,LPAssertions,Atoms),
+        %sort(Atoms0,Atoms),
+        delete(Explanation0,lpClassAssertion(_,_),Explanation1),
+        delete(Explanation1,lpPropertyAssertion(_,_,_),Explanation),
+        append(Atoms,T,NG),
+        append(CIn,Explanation,C1),
+	solve(NG,C1,COut, [instanceOf(Class,Individual)|GAS],GS).
 
 % solve_trill for propertyAssertion queries
 solve_trill(Role,Individual1,Individual2,T,CIn,COut, GAS,GS) :-
 	member(propertyAssertion(Role,Individual1,Individual2),GAS),
-	member(trill((Role,Individual1,Individual2),_),CIn),!,
+	%member(trill((Role,Individual1,Individual2),_),CIn),
+	!,
 	solve(T,CIn,COut, GAS,GS).
 
 solve_trill(Role,Individual1,Individual2,T,CIn,COut, GAS,GS) :-
-	property_value_meta(Role,Individual1,Individual2,Explanation),
-	include(is_lp_assertion,Explanation,LPAssertions),
-        maplist(lp_assertion_to_atom,LPAssertions,Atoms0),
-        sort(Atoms0,Atoms),
+	property_value_meta(Role,Individual1,Individual2,Explanation0),
+	include(is_lp_assertion,Explanation0,LPAssertions),
+        maplist(lp_assertion_to_atom,LPAssertions,Atoms),
+        %sort(Atoms0,Atoms),
+        delete(Explanation0,lpClassAssertion(_,_),Explanation1),
+        delete(Explanation1,lpPropertyAssertion(_,_,_),Explanation),
         append(Atoms,T,NG),
-        append(CIn,[trill((Role,Individual1,Individual2),Explanation)],C1),
+        append(CIn,Explanation,C1),
         solve(NG,C1,COut, [propertyAssertion(Role,Individual1,Individual2)|GAS],GS).
 
 
+solve_not_atomic_concept([(someValuesFrom(R,C),Individual)|T],CIn,COut,GAS,GS):-
+	Role=..[R,Individual,X],
+	Concept=..[C,X],
+	append([Role,Concept],T,NG),
+	solve(NG,CIn,COut,[instanceOf(someValuesFrom(R,C),Individual)|GAS],GS).
+	
+solve_not_atomic_concept([(Class,Individual)|T],CIn,COut,GAS,GS):-
+	solve_trill(Class,Individual,T,CIn,COut, GAS,GS).
+
+%solve_all([],GAS,GAS,[]).
+
+%solve_all([G|T],GAS,GAS1,ExplTot):-
+	%retractall(no_trill(false)),
+	%assert(no_trill(lpS)),
+	%setof(Expl,solve([G],[],Expl, GAS,GAS0),CN),
+	%retractall(no_trill(true)),
+	%assert(no_trill(false)),
+	%solve_all(T,GAS0,GAS1,ExplT),
+	%append(CN,ExplT,ExplTot).
+
 is_lp_assertion(lpClassAssertion(_,_)).
 is_lp_assertion(lpPropertyAssertion(_,_,_)).
+
+is_lp_subsumption(lpSubClassOf(_,_)).
+is_lp_subsumption(lpSubPropertyOf(_,_)).
 
 lp_assertion_to_atom(lpClassAssertion(Class,Individual),Atom):-
                 Atom=..[Class,Individual].
 lp_assertion_to_atom(lpPropertyAssertion(Role,Individual1, Individual2),Atom):-
                 Atom=..[Role,Individual1,Individual2].
 
+lp_subsumption_to_atom(lpSubClassOf(_,Class),Atom):-
+                Atom=..[Class,_Individual].
+lp_subsumption_to_atom(lpSubPropertyOf(_,Role),Atom):-
+                Atom=..[Role,_Individual1,_Individual2].
+
 find_body(H,B,_CIn,[]) :-
-	def_rule(H,[B]).
+	def_rule(H,Body),
+	member(B,Body).
 
 find_body(H,B,CIn,[(R,N,S)]):-
-	find_rule(H,(R,S,N),[B],CIn).
+	find_rule(H,(R,S,N),Body,CIn),
+	member(B,Body).
 
 /* built-in predicates */
 builtin(_A is _B).
@@ -537,6 +616,7 @@ assert_rules([H:P|T],Pos,HL,BL,NH,N,V1):-
 	assert_rules(T,Pos1,HL,BL,NH,N,V1).
 
 /* asserts lpClassAssertion and lpPropertyAssertion following the clauses */
+/* PER TUTTE O DEVO CONTROLLARE CHE SIANO SOLO a(X):-b(X). r(X,Y):-s(X,Y).???? */
 assert_lp_axioms([]).
 
 assert_lp_axioms([P/1|T]):- !,
