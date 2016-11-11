@@ -47,12 +47,20 @@ solve([\+ H |T],CIn,COut, GAS,GS) :- !,
     (member(nbf(H),GAS) -> solve(T,CIn,COut, GAS,GS)
         ;
 	(list2and(HL,H),
-	(setof(Expl,solve(HL,[],Expl, GAS,GAS1),CN) -> %% GAS1 da gestire meglio
+	 (setof(Expl,solve(HL,[],Expl, GAS,GAS1),CN) -> %% GAS1 da gestire meglio
 		append(CIn,[nbf(CN)],C1),
 		solve(T,C1,COut, [nbf(H)|GAS1],GS)
-	 ;
-		solve(T,CIn,COut, [nbf(H)|GAS],GS)
-	)
+	  ;
+		((length(HL,1),HL=[ClassHL],ClassHL=..[Class,Individual]) ->
+			(solve_trill(complementOf(Class),Individual,T,CIn,COut, GAS,GS) ->
+		  		true
+		 	 ;
+		  		solve(T,CIn,COut, [nbf(H)|GAS],GS)
+			)
+		 ;
+		 	solve(T,CIn,COut, [nbf(H)|GAS],GS)
+		)
+	 )
 	)
     ).
 
@@ -60,12 +68,20 @@ solve([nbf(H)|T],CIn,COut, GAS,GS) :- !,
     (member(nbf(H),GAS) -> solve(T,CIn,COut, GAS,GS)
         ;
 	(list2and(HL,H),
-	(setof(Expl,solve(HL,[],Expl, GAS,GAS1),CN) ->
+	 (setof(Expl,solve(HL,[],Expl, GAS,GAS1),CN) -> %% GAS1 da gestire meglio
 		append(CIn,[nbf(CN)],C1),
 		solve(T,C1,COut, [nbf(H)|GAS1],GS)
-	 ;
-		solve(T,CIn,COut, [nbf(H)|GAS],GS)
-	)
+	  ;
+		((length(HL,1),HL=[ClassHL],ClassHL=..[Class,Individual]) ->
+			(solve_trill(complementOf(Class),Individual,T,CIn,COut, GAS,GS) ->
+		  		true
+		 	 ;
+		  		solve(T,CIn,COut, [nbf(H)|GAS],GS)
+			)
+		 ;
+		 	solve(T,CIn,COut, [nbf(H)|GAS],GS)
+		)
+	 )
 	)
     ).
 
@@ -109,8 +125,8 @@ solve([H|T],CIn,COut, GAS,GS) :-
 	solve_trill(Class,Individual,T,CIn,COut, GAS,GS).
 
 solve([H|T],CIn,COut, GAS,GS) :-
-	H=..[Role,Individual1,Indovidual2],
-	solve_trill(Role,Individual1,Indovidual2,T,CIn,COut, GAS,GS).
+	H=..[Role,Individual1,Individual2],
+	solve_trill(Role,Individual1,Individual2,T,CIn,COut, GAS,GS).
 
 
 solve([H|T],CIn,COut, GAS,GS) :-
@@ -271,6 +287,13 @@ solve_not_atomic_concept([(someValuesFrom(R,C),Individual)|T],CIn,COut,GAS,GS):-
 	Concept=..[C,X],
 	append([Role,Concept],T,NG),
 	solve(NG,CIn,COut,[instanceOf(someValuesFrom(R,C),Individual)|GAS],GS).
+
+solve_not_atomic_concept([(allValuesFrom(R,C),Individual)|T],CIn,COut,GAS,GS):-
+	Role=..[R,Individual,X],
+	findall(X,solve(Role,_),LInds),
+	create_new_goals(C,LInds,NGInds),
+	append(NGInds,T,NG),
+	solve(NG,CIn,COut,[instanceOf(someValuesFrom(R,C),Individual)|GAS],GS).
 	
 solve_not_atomic_concept([(Class,Individual)|T],CIn,COut,GAS,GS):-
 	solve_trill(Class,Individual,T,CIn,COut, GAS,GS).
@@ -285,6 +308,13 @@ solve_not_atomic_concept([(Class,Individual)|T],CIn,COut,GAS,GS):-
 	%assert(no_trill(false)),
 	%solve_all(T,GAS0,GAS1,ExplT),
 	%append(CN,ExplT,ExplTot).
+
+create_new_goals(_C,[],[]).
+
+create_new_goals(C,[H|T],[Goal|T1]):-
+	Goal=..[C,H],
+	create_new_goals(C,T,T1).
+
 
 is_lp_assertion(lpClassAssertion(_,_)).
 is_lp_assertion(lpPropertyAssertion(_,_,_)).

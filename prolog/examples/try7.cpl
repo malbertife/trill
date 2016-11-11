@@ -1,0 +1,8 @@
+g(X):-d(X).
+
+
+subClassOf(someValuesFrom(r,c),d).
+
+c(a).
+c(b).
+r(a,b).

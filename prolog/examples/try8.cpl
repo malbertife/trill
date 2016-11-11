@@ -1,0 +1,9 @@
+g(X):-d(X).
+
+
+subClassOf(allValuesFrom(r,c),d).
+
+%c(a).
+c(b).
+r(a,b).
+%propertyAssertion(r,a,d).

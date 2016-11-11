@@ -1,0 +1,19 @@
+%%
+% LPAD
+%%
+spammer(X):0.3 :- hasReports(X), \+ trustedUser(X).
+rejected(X,Y) :- invited(X,Y), \+accepted(Y,X).
+
+
+%%
+% KB
+%%
+subClassOf(someValuesFrom(rejected,'Thing'),spammer).
+annotationAssertion('https://sites.google.com/a/unife.it/ml/disponte#probability',subClassOf(someValuesFrom(rejected,'Thing'),spammer),literal('0.4')).
+%subClassOf(minCardinality(3,reported),hasReports).
+subClassOf(minCardinality(3,reported,'Thing'),hasReports).
+subClassOf(someValuesFrom(reported,trustedUser),hasReports).
+
+propertyAssertion(invited,john,mary).
+classAssertion(minCardinality(3,reported,'Thing'),john).
+classAssertion(trustedUser,john).

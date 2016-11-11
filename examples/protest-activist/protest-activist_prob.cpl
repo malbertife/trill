@@ -1,0 +1,17 @@
+%%
+% LPAD
+%%
+protest:0.6 :- activist(X), \+ cruelToAnimals(X).
+
+activist(kevin).
+activist(nadia):0.3.
+
+
+%%
+% KB
+%%
+subClassOf(someValuesFrom(hasAnimal,pet),complementOf(cruelToAnimals)).
+propertyAssertion(hasAnimal,kevin,fluffy).
+subClassOf(cat,pet).
+classAssertion(cat,fluffy).
+annotationAssertion('https://sites.google.com/a/unife.it/ml/disponte#probability',classAssertion(cat,fluffy),literal('0.4')).
