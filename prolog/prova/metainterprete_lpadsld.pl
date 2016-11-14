@@ -133,8 +133,8 @@ solve([H|T],CIn,COut, GAS,GS) :-
 	H=..[Class,Individual],
 	(member(instanceOf(Class,Individual),GAS) -> solve(T,CIn,COut,GAS,GS)
 	 ;
-	  (owl2_model:subClassOf(SubClass,Class),
-	   append(CIn,[subClassOf(SubClass,Class)],C1),
+	  (find_subclass(SubClass,Class,Ex),
+	   append(CIn,[Ex],C1),
 	   (atom(SubClass) ->
 		(SubClassAtom =.. [SubClass,Individual],
 		 append([SubClassAtom],T,NG),
@@ -217,6 +217,15 @@ not_already_present_with_a_different_head_in_nbf(_N,_R,_S,[]).
 not_already_present_with_a_different_head_in_nbf(N,R,S,[L|T]) :-
 	not_already_present_with_a_different_head(N,R,S,L),
 	not_already_present_with_a_different_head_in_nbf(N,R,S,T).
+
+
+find_subclass(SubClass,Class,subClassOf(SubClass,Class)):-
+    owl2_model:subClassOf(SubClass,Class).
+
+find_subclass(SubClass,Class,equivalentClasses(SubClass,Class)):-
+    owl2_model:equivalentClasses(L),
+    member(Class,L),
+    member(SubClass,L).
 
 solve_pres(R,S,N,B,T,CIn,COut, GAS,GS):-
 	member_eq((N,R,S),CIn),!,
@@ -319,19 +328,14 @@ create_new_goals(C,[H|T],[Goal|T1]):-
 is_lp_assertion(lpClassAssertion(_,_)).
 is_lp_assertion(lpPropertyAssertion(_,_,_)).
 
-is_lp_subsumption(lpSubClassOf(_,_)).
-is_lp_subsumption(lpSubPropertyOf(_,_)).
 
 lp_assertion_to_atom(lpClassAssertion(Class,Individual),Atom):-
                 Atom=..[Class,Individual].
 lp_assertion_to_atom(lpPropertyAssertion(Role,Individual1, Individual2),Atom):-
                 Atom=..[Role,Individual1,Individual2].
 
-lp_subsumption_to_atom(lpSubClassOf(_,Class),Atom):-
-                Atom=..[Class,_Individual].
-lp_subsumption_to_atom(lpSubPropertyOf(_,Role),Atom):-
-                Atom=..[Role,_Individual1,_Individual2].
 
+/*
 find_body(H,B,_CIn,[]) :-
 	def_rule(H,Body),
 	member(B,Body).
@@ -339,6 +343,7 @@ find_body(H,B,_CIn,[]) :-
 find_body(H,B,CIn,[(R,N,S)]):-
 	find_rule(H,(R,S,N),Body,CIn),
 	member(B,Body).
+*/
 
 /* built-in predicates */
 builtin(_A is _B).

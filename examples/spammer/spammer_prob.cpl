@@ -15,5 +15,5 @@ subClassOf(minCardinality(3,reported,'Thing'),hasReports).
 subClassOf(someValuesFrom(reported,trustedUser),hasReports).
 
 propertyAssertion(invited,john,mary).
-classAssertion(minCardinality(3,reported,'Thing'),john).
-classAssertion(trustedUser,john).
+%classAssertion(minCardinality(3,reported,'Thing'),john).
+%classAssertion(trustedUser,john).

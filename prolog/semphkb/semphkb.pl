@@ -14,7 +14,7 @@
 
 
 setting(epsilon,0.00001).
-setting(ground_body,false).
+setting(ground_body,true).
 /* available values: true, false
 if true, both the head and the body of each clause will be grounded, otherwise
 only the head is grounded. In the case in which the body contains variables
@@ -403,20 +403,23 @@ process_clauses([(H,V)|T],ProbAnnotAx,[r(V,[H:1],true)|T1]):-
 	process_clauses(T0,ProbAnnotAx,T1).
 
 /* managess lpClassAssertion and lpPropertyAssertion following the clauses */
-manage_lp_axioms(C,LPList,NC):-
-	create_lp_axioms(LPList,NLPList),
+manage_lp_axioms(C,LPList0,NC):-
+	sort(LPList0,LPList),
+	create_lp_axioms(C,LPList,NLPList),
 	add_lp_axioms(C,NLPList,NC).
 
-create_lp_axioms([],[(end_of_file,[])]).
+create_lp_axioms(_,[],[(end_of_file,[])]).
 
-create_lp_axioms([P/1|T],[(lpClassAssertion(P),[])|T1]):- !,
-	create_lp_axioms(T,T1).
+create_lp_axioms(C,[P/1|T],[(lpClassAssertion(P),[])|T1]):- 
+	\+ member((lpClassAssertion(P),[]),C),!,
+	create_lp_axioms(C,T,T1).
 
-create_lp_axioms([P/2|T],[(lpPropertyAssertion(P),[])|T1]):- !,
-	create_lp_axioms(T,T1).
+create_lp_axioms(C,[P/2|T],[(lpPropertyAssertion(P),[])|T1]):- 
+	\+ member((lpPropertyAssertion(P),[]),C),!,
+	create_lp_axioms(C,T,T1).
 
-create_lp_axioms([_P/_A|T],T1):-
-	create_lp_axioms(T,T1).
+create_lp_axioms(C,[_P/_A|T],T1):-
+	create_lp_axioms(C,T,T1).
 
 add_lp_axioms(T,[],T).
 

@@ -565,13 +565,14 @@ findPropertyAssertion(R,Ind1,Ind2,[lpPropertyAssertion(R,Ind1,Ind2)],ABox):-
 get_subClassOf(C,D):-
   get_trill_current_module(Name),
   Name:subClassOf(C,D).
+/*
 get_subClassOf_lp(C,D,E):-
   atomic(C),
   owl2_model:lpClassAssertion(D),
   CP=..[C,_],
   DP=..[D,_],
   metainterpreter:find_body(DP,CP,[],E).
-
+*/
 
 get_equivalentClasses(L):-
   get_trill_current_module(Name),
@@ -580,13 +581,14 @@ get_equivalentClasses(L):-
 get_subPropertyOf(R,S):-
   get_trill_current_module(Name),
   Name:subPropertyOf(R,S).
+/*
 get_subPropertyOf_lp(R,S,E):-
   atomic(R),
   owl2_model:lpPropertyAssertion(S),
   RP=..[R,_,_],
   SP=..[S,_,_],
   metainterpreter:find_body(RP,SP,[],E).
-
+*/
 
 /**************/
 /*get_trill_current_module('translate_rdf'):-

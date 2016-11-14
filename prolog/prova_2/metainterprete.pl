@@ -36,6 +36,7 @@ solvei((A,B),GAS,[B|GS],E):-
 	solvei(B,GAS,GS,E).
 
 % gestione clausole a(X):-b(X,Y),c(Y)
+/*
 solvei((A,B),GAS,GS,E):-
 		A=..[R,I,Y],
 		B=..[C,Y],
@@ -45,10 +46,11 @@ solvei((A,B),GAS,GS,E):-
                    solveNewGoals(Atoms,(A,B),GAS,GSNG,Ex),
                    GS = [someValuesFrom(R,C)|GSNG],
                 append(Explanation,Ex,E).
+*/
 
 solvei((A,B),GAS,[B|GS],E):-!,
                 solvei(A,GAS,GSA,EA),
-                solvei(B,[A|GSA],GS,EB),
+                solvei(B,GSA,GS,EB),
                 append(EA,EB,E).
 
 
@@ -77,7 +79,7 @@ solvei(Goal,GAS,GS,E):-
 
 solvei(Goal,GAS,GS,E):-
                 Goal=..[Class,Individual],
-                member(instanceOf(Class,Individual),GAS) ->
+                (member(instanceOf(Class,Individual),GAS) ->
                   GS = GAS, E = []
                  ;
                   (Goal=..[Class,Individual],
@@ -85,26 +87,100 @@ solvei(Goal,GAS,GS,E):-
                    include(is_lp_assertion,Explanation,LPAssertions),
                    maplist(lp_assertion_to_atom,LPAssertions,Atoms),
                    solveNewGoals(Atoms,Goal,GAS,GSNG,Ex),
-                   GS=[instanceOf(Class,Individual)|GSNG]
-                ),
-                append(Explanation,Ex,E).
+                   GS=[instanceOf(Class,Individual)|GSNG],
+                   append(Explanation,Ex,E)
+                  )
+                ).
 
 solvei(Goal,GAS,GS,E):-
-		Goal=..[Role,Individual1,Indovidual2],
-		property_value_meta(Role,Individual1,Indovidual2,Explanation),
+		Goal=..[Role,Individual1,Individual2],
+		(member(propertyAssertion(Role,Individual1,Individual2),GAS) ->
+		  GS=GAS, E=[]
+		 ;
+		  (property_value_meta(Role,Individual1,Individual2,Explanation),
                    include(is_lp_assertion,Explanation,LPAssertions),
                    maplist(lp_assertion_to_atom,LPAssertions,Atoms),
                    solveNewGoals(Atoms,Goal,GAS,GSNG,Ex),
-                   GS=[propertyAssertion(Role,Individual1,Indovidual2)|GSNG],
-                append(Explanation,Ex,E).
+                   GS=[propertyAssertion(Role,Individual1,Individual2)|GSNG],
+                   append(Explanation,Ex,E)
+                  )
+                ).
+
+solvei(Goal,GAS,GS,E):-
+		Goal=..[Class,Individual],
+		(member(instanceOf(Class,Individual),GAS) -> 
+		   GS = GAS, E = []
+		  ;
+		   (find_subclass(SubClass,Class,Ex0),
+		    (atom(SubClass) ->
+		       (SubClassAtom=..[SubClass,Individual],
+		        solvei(SubClassAtom,[instanceOf(Class,Individual)|GAS],GS,Ex),
+		        E=[Ex0|Ex]
+		       )
+		     ;
+		       (solve_not_atomic_concept((SubClass,Individual),[instanceOf(Class,Individual)|GAS],GS,Ex),
+		        E=[Ex0|Ex]
+		       )
+		    )
+		   )
+		 ).
+
 
 
 solve_neg(Goal,GAS,GS,E) :-
 		setof(Expl1,solvei(Goal,GAS,GS,Expl1),Expl) *->
 		  E = [nbf(Expl)]
 		 ;
-		  E = [], GS = GAS.
+		  (Goal=..[Class,Individual] ->
+		  	((member(instanceOf(complementOf(Class),Individual),GAS) ->
+                  		GS = GAS, E = []
+                  	  ;
+                  	  	(instanceOf_meta(complementOf(Class),Individual,Explanation),
+                   		 include(is_lp_assertion,Explanation,LPAssertions),
+                   		 maplist(lp_assertion_to_atom,LPAssertions,Atoms),
+                   		 solveNewGoals(Atoms,Goal,GAS,GSNG,Ex),
+                   		 GS=[instanceOf(Class,Individual)|GSNG],
+                   		 append(Explanation,Ex,E)
+                   		)
+                   	 ) ->
+                   	   true
+                   	 ;
+                   	   E = [], GS = [nbf(Goal)|GAS]
+                   	)   
+                    ;
+                    	E = [], GS = [nbf(Goal)|GAS]
+                   ).                   
 
+
+solve_not_atomic_concept((someValuesFrom(R,C),Individual),GAS,GS,E):-
+	Role=..[R,Individual,X],
+	Concept=..[C,X],
+	solvei((Role,Concept),[instanceOf(someValuesFrom(R,C),Individual)|GAS],GS,E).
+
+solve_not_atomic_concept((allValuesFrom(R,C),Individual),GAS,GS,E):-
+	Role=..[R,Individual,X],
+	findall(X,solve(Role,_),LInds),
+	create_new_goals(C,LInds,NG),
+	solvei(NG,[instanceOf(someValuesFrom(R,C),Individual)|GAS],GS,E).
+	
+solve_not_atomic_concept((Class,Individual),GAS,GS,E):-
+	member(instanceOf(Class,Individual),GAS) ->
+                  GS = GAS, E = []
+                 ;
+                  (instanceOf_meta(Class,Individual,Explanation),
+                   include(is_lp_assertion,Explanation,LPAssertions),
+                   maplist(lp_assertion_to_atom,LPAssertions,Atoms),
+                   solveNewGoals(Atoms,dummyGoal,GAS,GSNG,Ex),
+                   GS=[instanceOf(Class,Individual)|GSNG],
+                   append(Explanation,Ex,E)
+                  ).
+
+create_new_goals(C,[H],Goal):- !,
+	Goal=..[C,H].
+
+create_new_goals(C,[H|T],(Goal,T1)):-
+	Goal=..[C,H],
+	create_new_goals(C,T,T1).
 
 /* **********************
 	UTILITIES
@@ -134,6 +210,15 @@ member_eq(A,[_H|T]):-
 	member_eq(A,T).
 
 
+
+find_clause(H,B,(H,BL)):-
+	def_rule(H,BL),
+	list2and(BL,B).
+
+find_clause(H,B,(N,R,S)):-
+	find_rule(H,(R,S,N),Body,_),
+	list2and(Body,B).
+	
 /* find_rule(G,(R,S,N),Body,C) takes a goal G and the current C set and
 returns the index R of a disjunctive rule resolving with G together with
 the index N of the resolving head, the substitution S and the Body of the
@@ -181,14 +266,13 @@ not_already_present_with_a_different_head_in_nbf(N,R,S,[L|T]) :-
 	not_already_present_with_a_different_head_in_nbf(N,R,S,T).
 
 
+find_subclass(SubClass,Class,subClassOf(SubClass,Class)):-
+    owl2_model:subClassOf(SubClass,Class).
 
-find_clause(H,B,(H,BL)):-
-	def_rule(H,BL),
-	list2and(BL,B).
-
-find_clause(H,B,(N,R,S)):-
-	find_rule(H,(R,S,N),Body,_),
-	list2and(Body,B).
+find_subclass(SubClass,Class,equivalentClasses(SubClass,Class)):-
+    owl2_model:equivalentClasses(L),
+    member(Class,L),
+    member(SubClass,L).
 
 
 /* TRILL utilities */
@@ -210,6 +294,16 @@ solveNewGoals([H|T],G,GAS,GS,E):-
                 solveNewGoals(T,G,GSH,GS,ET),
                 append(EH,ET,E).
 
+
+/*
+find_body(H,B,_CIn,[]) :-
+	def_rule(H,Body),
+	member(B,Body).
+
+find_body(H,B,CIn,[(R,N,S)]):-
+	find_rule(H,(R,S,N),Body,CIn),
+	member(B,Body).
+*/
 
 /* built-in predicates */
 builtin(_A is _B).
@@ -656,7 +750,10 @@ read_clauses_exist_body(S,[(Cl,V)|Out]):-
 	).
 
 
-%extract_vars_cl(end_of_file,[]).
+/* extract_vars_cl(Clause,VariableNames,Couples)
+	extract from Clause couples of the form VariableName=Variable
+*/
+extract_vars_cl(end_of_file,[],[]).
 
 extract_vars_cl(Cl,VN,Couples):-
 	(Cl=(H:-_B)->
