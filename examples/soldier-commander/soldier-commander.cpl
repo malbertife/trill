@@ -1,9 +1,0 @@
-
-subClassOf(allValuesFrom(commands2,soldier),commander).
-classAssertion(guard,pete).
-classAssertion(guard,al).
-classAssertion(allValuesFrom(commands,guard),john).
-subClassOf(guard,soldier1).
-subClassOf(soldier1,soldier).
-subPropertyOf(commands, commands1).
-subPropertyOf(commands1, commands2).
