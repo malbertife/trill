@@ -20,6 +20,11 @@ if true, both the head and the body of each clause will be grounded, otherwise
 only the head is grounded. In the case in which the body contains variables
 not appearing in the head, the body represents an existential event */
 
+setting(universe,false).
+/* available values: true, false
+if true, universe file is used
+*/
+
 setting(grounding,variables).
 /* available values: variables, modes
 if set to variables, the universe facts from the .uni file are used
@@ -62,8 +67,13 @@ s(Goal,File,Prob) :-
 	open(FilePl,read,S),
 	read_clauses(S,C),
 	close(S),
-	%atom_concat(File,'.uni',FileUni),
-	%consult(FileUni),
+	(setting(universe,true) ->
+		(atom_concat(File,'.uni',FileUni),
+		 consult(FileUni)
+		)
+	  ;
+	  	true
+	),
 	process_clauses(C,ClausesVar),
 	instantiate(ClausesVar,[],Clauses),!,
 	s1(Goal,Clauses,Prob).
@@ -95,8 +105,13 @@ p(File):-
 	open(FilePl,read,S),
 	read_clauses(S,C),
 	close(S),
-	%atom_concat(File,'.uni',FileUni),
-	%consult(FileUni),
+	(setting(universe,true) ->
+		(atom_concat(File,'.uni',FileUni),
+		 consult(FileUni)
+		)
+	  ;
+	  	true
+	),
 	process_clauses(C,ClausesVar),
 	instantiate(ClausesVar,[],Clauses),
 	assert(program(1)),
