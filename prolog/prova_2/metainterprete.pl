@@ -10,7 +10,7 @@
 :-dynamic setting/2.
 
 setting(epsilon,0.00001).
-setting(ground_body,false).
+setting(ground_body,true).
 
 prob(G,Prob) :-
 	setof(Ex,solve(G,Ex),Expl),
@@ -126,7 +126,8 @@ solvei(Goal,GAS,GS,E):-
 		 ).
 
 
-
+/* **	MORE COMPLETED VERSION
+	SOLVE complementOf WITH TRILL USELESS
 solve_neg(Goal,GAS,GS,E) :-
 		setof(Expl1,solvei(Goal,GAS,GS,Expl1),Expl) *->
 		  E = [nbf(Expl)]
@@ -150,7 +151,12 @@ solve_neg(Goal,GAS,GS,E) :-
                     ;
                     	E = [], GS = [nbf(Goal)|GAS]
                    ).                   
-
+*/
+solve_neg(Goal,GAS,GS,E) :-
+		setof(Expl1,solvei(Goal,GAS,GS,Expl1),Expl) *->
+		  E = [nbf(Expl)]
+		 ;
+		E = [], GS = GAS.
 
 solve_not_atomic_concept((someValuesFrom(R,C),Individual),GAS,GS,E):-
 	Role=..[R,Individual,X],

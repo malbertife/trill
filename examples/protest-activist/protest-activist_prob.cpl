@@ -15,3 +15,4 @@ propertyAssertion(hasAnimal,kevin,fluffy).
 subClassOf(cat,pet).
 classAssertion(cat,fluffy).
 annotationAssertion('https://sites.google.com/a/unife.it/ml/disponte#probability',classAssertion(cat,fluffy),literal('0.4')).
+

@@ -1,0 +1,160 @@
+Ceremony DL: 
+- semphkb: 
+   P: 0.320000
+   T: 0.000975
+- prova/metainterprete_lpadsld.pl: 
+   P: 0.320000
+   T: 0.001278
+- prova_2/metainterprete.pl: 
+   P: 0.320000
+   T: 0.001311
+Ceremony PL: 
+- semphkb: 
+   P: 0.384000
+   T: 0.002342
+- prova/metainterprete_lpadsld.pl: 
+   P: 0.384000
+   T: 0.001099
+- prova_2/metainterprete.pl: 
+   P: 0.384000
+   T: 0.001119
+Married: 
+- semphkb: 
+   P: 0.400000
+   T: 0.002308
+- prova/metainterprete_lpadsld.pl: 
+   P: 0.400000
+   T: 0.010973
+- prova_2/metainterprete.pl: 
+   P: 0.400000
+   T: 0.011142
+Protest Activist: 
+- semphkb: 
+   P: 0.672000
+   T: 0.006964
+- prova/metainterprete_lpadsld.pl: 
+   P: 0.672000
+   T: 0.001467
+- prova_2/metainterprete.pl: 
+   P: 0.672000
+   T: 0.001464
+Soldier Commander: 
+- semphkb: 
+   P: 0.640000
+   T: 0.012805
+- prova/metainterprete_lpadsld.pl: 
+   P: 0.640000
+   T: 0.005478
+- prova_2/metainterprete.pl: 
+   P: 0.640000
+   T: 0.005475
+Spammer: 
+- semphkb: 
+   P: 0.400000
+   T: 0.004478
+- prova/metainterprete_lpadsld.pl: 
+   P: 0.400000
+   T: 0.003801
+- prova_2/metainterprete.pl: 
+   P: 0.400000
+   T: 0.003891
+Coin: 
+- semphkb: 
+   P: 0.510000
+   T: 0.002046
+- prova/metainterprete_lpadsld.pl: 
+   P: 0.510000
+   T: 0.000729
+- prova_2/metainterprete.pl: 
+   P: 0.510000
+   T: 0.000739
+Monty: 
+- semphkb: 
+   P: 0.666667
+   T: 0.009530
+- prova/metainterprete_lpadsld.pl: 
+   P: 0.666667
+   T: 0.003067
+- prova_2/metainterprete.pl: 
+   P: 0.666667
+   T: 0.002810
+Try 1: 
+- semphkb: 
+   P: 0.058000
+   T: 0.074243
+- prova/metainterprete_lpadsld.pl: 
+   P: 0.058000
+   T: 0.071235
+- prova_2/metainterprete.pl: 
+   P: 0.058000
+   T: 0.073042
+Try 2: 
+- semphkb: 
+   P: 1.000000
+   T: 0.020667
+- prova/metainterprete_lpadsld.pl: 
+   P: 1.000000
+   T: 0.150927
+- prova_2/metainterprete.pl: 
+   P: 1.000000
+   T: 0.151082
+Try 3: 
+- semphkb: 
+   P: 0.700000
+   T: 0.003224
+- prova/metainterprete_lpadsld.pl: 
+   P: 0.700000
+   T: 0.003522
+- prova_2/metainterprete.pl: 
+   P: 0.700000
+   T: 0.003646
+Try 4: 
+- semphkb: 
+   P: 0.058000
+   T: 0.002756
+- prova/metainterprete_lpadsld.pl: 
+   P: 0.058000
+   T: 0.000901
+- prova_2/metainterprete.pl: 
+   P: 0.058000
+   T: 0.000900
+Try 5: 
+- semphkb: 
+   P: 0.030000
+   T: 0.001035
+- prova/metainterprete_lpadsld.pl: 
+   P: 0.030000
+   T: 0.000594
+- prova_2/metainterprete.pl: 
+   P: 0.030000
+   T: 0.000572
+Try 6: 
+- semphkb: 
+   P: 1.000000
+   T: 0.000504
+- prova/metainterprete_lpadsld.pl: 
+   P: 1.000000
+   T: 0.000769
+- prova_2/metainterprete.pl: 
+   P: 1.000000
+   T: 0.000789
+Try 7: 
+- semphkb: 
+   P: 1.000000
+   T: 0.000477
+- prova/metainterprete_lpadsld.pl: 
+   P: 1.000000
+   T: 0.000690
+- prova_2/metainterprete.pl: 
+   P: 1.000000
+   T: 0.000666
+Try 8: 
+- semphkb: 
+   P: 1.000000
+   T: 0.000527
+- prova/metainterprete_lpadsld.pl: 
+   P: 1.000000
+   T: 0.000781
+- prova_2/metainterprete.pl: 
+   P: 1.000000
+   T: 0.000833

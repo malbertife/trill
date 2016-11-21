@@ -10,7 +10,7 @@
 :-dynamic setting/2.
 
 setting(epsilon,0.00001).
-setting(ground_body,false).
+setting(ground_body,true).
 
 prob(Goal,P) :-
 	setof(Expl,find_expl([Goal],Expl),ExplDup),
@@ -44,46 +44,10 @@ solve([],C,C, GS,GS) :- !.
 /* negation, both \+ and nbf/1 are usable */
 
 solve([\+ H |T],CIn,COut, GAS,GS) :- !,
-    (member(nbf(H),GAS) -> solve(T,CIn,COut, GAS,GS)
-        ;
-	(list2and(HL,H),
-	 (setof(Expl,solve(HL,[],Expl, GAS,GAS1),CN) -> %% GAS1 da gestire meglio
-		append(CIn,[nbf(CN)],C1),
-		solve(T,C1,COut, [nbf(H)|GAS1],GS)
-	  ;
-		((length(HL,1),HL=[ClassHL],ClassHL=..[Class,Individual]) ->
-			(solve_trill(complementOf(Class),Individual,T,CIn,COut, GAS,GS) ->
-		  		true
-		 	 ;
-		  		solve(T,CIn,COut, [nbf(H)|GAS],GS)
-			)
-		 ;
-		 	solve(T,CIn,COut, [nbf(H)|GAS],GS)
-		)
-	 )
-	)
-    ).
+	solve_neg(H,T,CIn,COut,GAS,GS).
 
 solve([nbf(H)|T],CIn,COut, GAS,GS) :- !,
-    (member(nbf(H),GAS) -> solve(T,CIn,COut, GAS,GS)
-        ;
-	(list2and(HL,H),
-	 (setof(Expl,solve(HL,[],Expl, GAS,GAS1),CN) -> %% GAS1 da gestire meglio
-		append(CIn,[nbf(CN)],C1),
-		solve(T,C1,COut, [nbf(H)|GAS1],GS)
-	  ;
-		((length(HL,1),HL=[ClassHL],ClassHL=..[Class,Individual]) ->
-			(solve_trill(complementOf(Class),Individual,T,CIn,COut, GAS,GS) ->
-		  		true
-		 	 ;
-		  		solve(T,CIn,COut, [nbf(H)|GAS],GS)
-			)
-		 ;
-		 	solve(T,CIn,COut, [nbf(H)|GAS],GS)
-		)
-	 )
-	)
-    ).
+	solve_neg(H,T,CIn,COut,GAS,GS).
 
 solve([H|T],CIn,COut, GAS,GS):-
 	builtin(H),!,
@@ -236,6 +200,42 @@ solve_pres(R,S,N,B,T,CIn,COut, GAS,GS):-
 	append(CIn,[(N,R,S)],C1),
 	append(B,T,NG),
 	solve(NG,C1,COut, GAS,GS).
+
+/* **	MORE COMPLETED VERSION
+	SOLVE complementOf WITH TRILL USELESS
+solve_neg(H,T,CIn,COut, GAS,GS) :-
+    (member(nbf(H),GAS) -> solve(T,CIn,COut, GAS,GS)
+        ;
+	(list2and(HL,H),
+	 (setof(Expl,solve(HL,[],Expl, GAS,GAS1),CN) -> %% GAS1 da gestire meglio
+		append(CIn,[nbf(CN)],C1),
+		solve(T,C1,COut, [nbf(H)|GAS1],GS)
+	  ;
+		((length(HL,1),HL=[ClassHL],ClassHL=..[Class,Individual]) ->
+			(solve_trill(complementOf(Class),Individual,T,CIn,COut, GAS,GS) ->
+		  		true
+		 	 ;
+		  		solve(T,CIn,COut, [nbf(H)|GAS],GS)
+			)
+		 ;
+		 	solve(T,CIn,COut, [nbf(H)|GAS],GS)
+		)
+	 )
+	)
+    ).
+*/
+solve_neg(H,T,CIn,COut, GAS,GS) :-
+    (member(nbf(H),GAS) -> solve(T,CIn,COut, GAS,GS)
+        ;
+	(list2and(HL,H),
+	 (setof(Expl,solve(HL,[],Expl, GAS,GAS1),CN) -> %% GAS1 da gestire meglio
+		append(CIn,[nbf(CN)],C1),
+		solve(T,C1,COut, [nbf(H)|GAS1],GS)
+	  ;
+		solve(T,CIn,COut, [nbf(H)|GAS],GS)
+	 )
+	)
+    ).
 
 
 /* TRILL utilities */

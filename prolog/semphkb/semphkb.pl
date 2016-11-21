@@ -20,7 +20,7 @@ if true, both the head and the body of each clause will be grounded, otherwise
 only the head is grounded. In the case in which the body contains variables
 not appearing in the head, the body represents an existential event */
 
-setting(universe,false).
+setting(universe,true).
 /* available values: true, false
 if true, universe file is used
 */
@@ -69,7 +69,11 @@ s(Goal,File,Prob) :-
 	close(S),
 	(setting(universe,true) ->
 		(atom_concat(File,'.uni',FileUni),
-		 consult(FileUni)
+		 (exists_file(FileUni) ->
+			consult(FileUni)
+		  ;
+		  	true
+		 )
 		)
 	  ;
 	  	true

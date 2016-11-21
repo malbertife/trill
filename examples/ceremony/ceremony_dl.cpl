@@ -1,0 +1,9 @@
+ceremony :- decorated(X).
+
+guard(pete).
+guard(al).
+
+subClassOf(guard,soldier).
+annotationAssertion('https://sites.google.com/a/unife.it/ml/disponte#probability',subClassOf(guard,soldier),literal('0.8')).
+subClassOf(soldier,decorated).
+annotationAssertion('https://sites.google.com/a/unife.it/ml/disponte#probability',subClassOf(soldier,decorated),literal('0.4')).

@@ -114,7 +114,8 @@ solvei(Goal,GAS,GS,E):-
 		 ).
 
 
-
+/* **	MORE COMPLETED VERSION
+	SOLVE complementOf WITH TRILL USELESS
 solve_neg(Goal,GAS,GS,E) :-
 		%setof(Expl1,solvei(Goal,GAS,GS,Expl1),Expl)
 		solvei(Goal,GAS,GS,_Expl) *->
@@ -139,7 +140,14 @@ solve_neg(Goal,GAS,GS,E) :-
                     ;
                     	E = [], GS = [nbf(Goal)|GAS]
                    ).                   
-
+*/
+solve_neg(Goal,GAS,GS,E) :-
+		%setof(Expl1,solvei(Goal,GAS,GS,Expl1),Expl)
+		(solvei(Goal,GAS,_GS,_Expl) *->
+		  fail
+		 ;
+		  (E = [], GS = GAS)
+		).
 
 solve_not_atomic_concept((someValuesFrom(R,C),Individual),GAS,GS,E):-
 	Role=..[R,Individual,X],
