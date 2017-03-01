@@ -1,0 +1,11 @@
+%%
+% LPAD
+%%
+soldier(X) :- guard(X), \+dog(X).
+
+%%
+% KB
+%%
+subClassOf(someValuesFrom(commands,soldier),commander).
+classAssertion(guard,al).
+propertyAssertion(commands,john,al).

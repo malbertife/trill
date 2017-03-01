@@ -1,0 +1,11 @@
+%%
+% LPAD
+%%
+person(X) :- \+dog(X).
+
+%%
+% KB
+%%
+subClassOf(intersectionOf([guard,person]),soldier).
+subClassOf(someValuesFrom(commands,soldier),commander).
+classAssertion(someValuesFrom(commands,guard),john).

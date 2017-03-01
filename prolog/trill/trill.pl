@@ -4,7 +4,8 @@
                  property_value/3, property_value/4, prob_property_value/4,
                  unsat/1, unsat/2, prob_unsat/2,
                  inconsistent_theory/0, inconsistent_theory/1, prob_inconsistent_theory/1,
-                 axiom/1, add_kb_prefix/2, add_axiom/1, add_axioms/1, remove_kb_prefix/2, remove_kb_prefix/1, remove_axiom/1, remove_axioms/1,
+                 axiom/1, add_kb_prefix/2, add_axiom/1, add_axioms/1, 
+                 remove_kb_prefix/2, remove_kb_prefix/1, remove_axiom/1, remove_axioms/1,
                  load_kb/1, load_owl_kb/1, build_and_expand/1, instanceOf_meta/3,property_value_meta/4] ).
 
 %:- set_prolog_flag(unknow,fail).
@@ -107,9 +108,9 @@ instanceOf_meta(C,I,E):-
   %findall((ABox1,Tabs1),apply_rules_0((ABox0,Tabs),(ABox1,Tabs1)),L),
   findall((ABox1,Tabs1),apply_all_rules((ABox0,Tabs),(ABox1,Tabs1)),L),
   find_expls(L,[C,I],E),
-  delete_from(L,(classAssertion(complementOf(C),I),[]),L0),
-  retractall(abox(_)),
-  assert(abox(L0)),
+  %delete_from(L,(classAssertion(complementOf(C),I),[]),L0),
+  %retractall(abox(_)),
+  %assert(abox(L0)),
   dif(E,[]).
 
 find_instance(C,Ind):-
@@ -126,8 +127,8 @@ property_value_meta(R,I1,I2,E):-
   %abox((ABox,Tabs)),
   findall((ABox1,Tabs1),apply_all_rules((ABox,Tabs),(ABox1,Tabs1)),L),
   find_expls(L,[R,I1,I2],E),
-  retractall(abox(_)),
-  assert(abox(L)),
+  %retractall(abox(_)),
+  %assert(abox(L)),
   dif(E,[]).
 
 % Deletes axiom form all aboxes

@@ -1,4 +1,4 @@
-:- module(metainterpreter,[prob/2,solve/2,p/1]).
+:- module(metainterpreter,[prob/2,prob_old/2,solve/2,p/1]).
 
 :- use_module('../trill/trill.pl').
 :- use_foreign_library(foreign(bddem),install).
@@ -12,10 +12,41 @@
 setting(epsilon,0.00001).
 setting(ground_body,true).
 
-prob(Goal,P) :-
+prob_old(Goal,P) :-
 	setof(Expl,find_expl([Goal],Expl),ExplDup),
 	compute_prob_mt(ExplDup,P).
 	
+prob(Goal,P) :-
+	retractall(v(_,_,_)),
+	retractall(na(_,_)),
+	retractall(rule_n(_)),
+	retractall(bdd_in_building(_,_)),
+	assert(rule_n(0)),
+	%findall(1,owl2_model:annotationAssertion('https://sites.google.com/a/unife.it/ml/disponte#probability',_,_),NAnnAss),
+	%length(NAnnAss,NVarDL),
+	%count_var(Expl,NVarDL,NV),
+	init_test(1,Env),
+	zero(Env,BDD),
+	assert(bdd_in_building(Env,BDD)),
+	build_and_expand(_),
+	create_bdd(Goal,P).
+	
+
+create_bdd(Goal,_P):-
+	solve([Goal],[],ExplDup,[],_GS),
+	sort(ExplDup,Expl),
+	bdd_in_building(Env,BDDT),
+	retractall(bdd_in_building(_,_)),
+	bdd_and_mt(Env,Expl,BDDE),
+	or(Env,BDDT,BDDE,BDD),
+	assert(bdd_in_building(Env,BDD)),
+	fail.
+
+create_bdd(_,P):-
+	bdd_in_building(Env,BDD),
+	retractall(bdd_in_building(_,_)),
+	ret_prob(Env,BDD,P),
+	end_test(Env), !.
 
 solve(Goal,E):-
 	find_expl([Goal],E).
@@ -55,21 +86,23 @@ solve([H|T],CIn,COut, GAS,GS):-
 	solve(T,CIn,COut, GAS,GS).
 
 solve([H|T],CIn,COut, GAS,GS):-
-	member(H,GAS) ->
+	(member(H,GAS) ->
 		solve(T,CIn,COut,GAS,GS)
 	 ;
 		(def_rule(H,B),
 		 append(B,T,NG),
 		 solve(NG,CIn,COut, GAS,GS)
-		).
+		)
+	).
 
 solve([H|T],CIn,COut, GAS,GS):-
-     (member(H,GAS) -> solve(T,CIn,COut,GAS,GS)
-       ;
-	(find_rule(H,(R,S,N),B,CIn),
-	solve_pres(R,S,N,B,T,CIn,COut, [H|GAS],GS)
-	)
-     ).
+	(member(H,GAS) -> 
+     	solve(T,CIn,COut,GAS,GS)
+	 ;
+		(find_rule(H,(R,S,N),B,CIn),
+		 solve_pres(R,S,N,B,T,CIn,COut, [H|GAS],GS)
+		)
+	).
 
 /*
 solve([A,B|T],CIn,COut, GAS,GS) :-
@@ -93,6 +126,7 @@ solve([H|T],CIn,COut, GAS,GS) :-
 	solve_trill(Role,Individual1,Individual2,T,CIn,COut, GAS,GS).
 
 
+/*
 solve([H|T],CIn,COut, GAS,GS) :-
 	H=..[Class,Individual],
 	(member(instanceOf(Class,Individual),GAS) -> solve(T,CIn,COut,GAS,GS)
@@ -109,7 +143,7 @@ solve([H|T],CIn,COut, GAS,GS) :-
 	   )
 	  )
 	).
-	
+*/	
 
 
 /* **********************
