@@ -94,6 +94,7 @@ solvei(Goal,GAS,GS,E):-
                   )
                 ).
 
+/*
 solvei(Goal,GAS,GS,E):-
 		Goal=..[Class,Individual],
 		(member(instanceOf(Class,Individual),GAS) -> 
@@ -112,7 +113,7 @@ solvei(Goal,GAS,GS,E):-
 		    )
 		   )
 		 ).
-
+*/
 
 /* **	MORE COMPLETED VERSION
 	SOLVE complementOf WITH TRILL USELESS
