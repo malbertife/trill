@@ -1,0 +1,10 @@
+f(X):-a(X),b(X).
+subClassOf(a1,a).
+subClassOf(c,a1).
+subClassOf(b1,b).
+subClassOf(c,b1).
+subClassOf(c1,c).
+subClassOf(c2,c).
+subClassOf(d,c1).
+subClassOf(d,c2).
+classAssertion(d,i).

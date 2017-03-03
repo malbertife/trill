@@ -1,4 +1,7 @@
-:- module(metainterpreter,[prob/2,prob_old/2,solve/2,p/1]).
+:- module(metainterpreter,[prob/2,prob_old/2,solve/2,solve2/2,p/1]).
+
+:- use_module(library(tabling)).
+:- table solve1/2.
 
 :- use_module('../trill/trill.pl').
 :- use_foreign_library(foreign(bddem),install).
@@ -51,11 +54,18 @@ create_bdd(_,P):-
 solve(Goal,E):-
 	find_expl([Goal],E).
 
+solve2(Goal,E):-
+	find_expl1([Goal],E).
+
 find_expl(GoalsList,Deriv):-
 	build_and_expand(_),
 	solve(GoalsList,[],DerivDup,[],_GS),
 	sort(DerivDup,Deriv).
 
+find_expl1(GoalsList,Deriv):-
+	build_and_expand(_),
+	solve1(GoalsList,DerivDup),
+	sort(DerivDup,Deriv).
 
 /* solve(GoalsList,CIn,COut, GSIn,GSOut) takes a list of goals and an input C set
 and returns an output C set
@@ -91,7 +101,7 @@ solve([H|T],CIn,COut, GAS,GS):-
 	 ;
 		(def_rule(H,B),
 		 append(B,T,NG),
-		 solve(NG,CIn,COut, GAS,GS)
+		 solve(NG,CIn,COut, [H|GAS],GS)
 		)
 	).
 
@@ -99,7 +109,7 @@ solve([H|T],CIn,COut, GAS,GS):-
 	(member(H,GAS) -> 
      	solve(T,CIn,COut,GAS,GS)
 	 ;
-		(find_rule(H,(R,S,N),B,CIn),
+		(find_rule(H,(R,S,N),B),
 		 solve_pres(R,S,N,B,T,CIn,COut, [H|GAS],GS)
 		)
 	).
@@ -145,6 +155,57 @@ solve([H|T],CIn,COut, GAS,GS) :-
 	).
 */	
 
+/* solve1(GoalsList,C) is similar to solve/5. It takes a list of goals
+and returns an output C set. It does not use a list of executed goals.
+*/
+
+solve1([],[]) :- !.
+
+
+/* negation, both \+ and nbf/1 are usable */
+
+solve1([\+ H |T],C) :- !,
+	solve_neg(H,T,C).
+
+solve1([nbf(H)|T],C) :- !,
+	solve_neg(H,T,C).
+
+solve1([H|T],C):-
+	builtin(H),!,
+	call(H),
+	solve1(T,C).
+
+solve1([H|T],C):-
+	def_rule(H,B),
+	append(B,T,NG),
+	solve1(NG,C).
+
+solve1([H|T],C):-
+	find_rule(H,(R,S,N),B),
+	solve_pres(R,S,N,B,T,C).
+
+/*
+solve1([A,B|T],C) :-
+	A=..[R,I,Y],
+	B=..[C,Y],
+	solve_trill(someValuesFrom(R,C),I,T,C).
+
+
+solve1([A,B|T],C) :-
+	B=..[R,I,Y],
+	A=..[C,Y],
+	solve_trill(someValuesFrom(R,C),I,T,C).
+*/
+
+solve1([H|T],C) :-
+	H=..[Class,Individual],
+	solve_trill(Class,Individual,T,C).
+
+solve1([H|T],C) :-
+	H=..[Role,Individual1,Individual2],
+	solve_trill(Role,Individual1,Individual2,T,C).
+
+
 
 /* **********************
 	UTILITIES
@@ -170,15 +231,15 @@ member_eq(A,[_H|T]):-
 	member_eq(A,T).
 
 
-/* find_rule(G,(R,S,N),Body,C) takes a goal G and the current C set and
-returns the index R of a disjunctive rule resolving with G together with
-the index N of the resolving head, the substitution S and the Body of the
-rule */
-find_rule(H,(R,S,N),Body,_C):-
+/* find_rule(G,(R,S,N),Body) takes a goal G and returns the 
+index R of a disjunctive rule resolving with G together with
+the index N of the resolving head, the substitution S and 
+the Body of the rule */
+find_rule(H,(R,S,N),Body):-
 	rule(H,_P,N,R,S,_,Head,Body),
 	member_head(H,Head,0,N).
 
-find_rule(H,(R,S,Number),Body,_C):-
+find_rule(H,(R,S,Number),Body):-
 	rule_uniform(H,R,S,_,1/_Num,_L,Number,Body).
 
 member_head(H,[(H:_P)|_T],N,N).
@@ -225,6 +286,7 @@ find_subclass(SubClass,Class,equivalentClasses(SubClass,Class)):-
     member(Class,L),
     member(SubClass,L).
 
+/* --- solve_pres/9 --- */
 solve_pres(R,S,N,B,T,CIn,COut, GAS,GS):-
 	member_eq((N,R,S),CIn),!,
 	append(B,T,NG),
@@ -234,6 +296,17 @@ solve_pres(R,S,N,B,T,CIn,COut, GAS,GS):-
 	append(CIn,[(N,R,S)],C1),
 	append(B,T,NG),
 	solve(NG,C1,COut, GAS,GS).
+
+/* --- solve_pres/6 --- */
+solve_pres(R,S,N,B,T,C):-
+	append(B,T,NG),
+	solve1(NG,C1),
+	(member_eq((N,R,S),C1) ->
+		C = C1
+	  ;
+		append(C1,[(N,R,S)],C)
+	).
+
 
 /* **	MORE COMPLETED VERSION
 	SOLVE complementOf WITH TRILL USELESS
@@ -258,6 +331,8 @@ solve_neg(H,T,CIn,COut, GAS,GS) :-
 	)
     ).
 */
+
+/* --- solve_neg/5 --- */
 solve_neg(H,T,CIn,COut, GAS,GS) :-
     (member(nbf(H),GAS) -> solve(T,CIn,COut, GAS,GS)
         ;
@@ -271,8 +346,20 @@ solve_neg(H,T,CIn,COut, GAS,GS) :-
 	)
     ).
 
+/* --- solve_neg/3 --- */
+solve_neg(H,T,C) :-
+    list2and(HL,H),
+	(setof(Expl,solve(HL,Expl),CN) -> %% GAS1 da gestire meglio
+		(solve1(T,C1),
+		 append(C1,[nbf(CN)],C))
+	  ;
+		solve1(T,C)
+	).
+
 
 /* TRILL utilities */
+/* --- solve_trill/7 --- */
+
 % solve_trill for classAssertion queries
 solve_trill(Class,Individual,T,CIn,COut, GAS,GS) :-
 	member(instanceOf(Class,Individual),GAS),
@@ -306,6 +393,7 @@ solve_trill(Class,Individual,T,CIn,COut, GAS,GS) :-
         append(CIn,Explanation,C1),
 	solve(NG,C1,COut, [instanceOf(Class,Individual)|GAS],GS).
 
+/* --- solve_trill/8 --- */
 % solve_trill for propertyAssertion queries
 solve_trill(Role,Individual1,Individual2,T,CIn,COut, GAS,GS) :-
 	member(propertyAssertion(Role,Individual1,Individual2),GAS),
@@ -323,6 +411,30 @@ solve_trill(Role,Individual1,Individual2,T,CIn,COut, GAS,GS) :-
         append(Atoms,T,NG),
         append(CIn,Explanation,C1),
         solve(NG,C1,COut, [propertyAssertion(Role,Individual1,Individual2)|GAS],GS).
+
+/* --- solve_trill/4 --- */
+solve_trill(Class,Individual,T,C) :-
+	instanceOf_meta(Class,Individual,Explanation0),
+	include(is_lp_assertion,Explanation0,LPAssertions),
+    maplist(lp_assertion_to_atom,LPAssertions,Atoms),
+    %sort(Atoms0,Atoms),
+    delete(Explanation0,lpClassAssertion(_,_),Explanation1),
+    delete(Explanation1,lpPropertyAssertion(_,_,_),Explanation),
+    append(Atoms,T,NG),
+	solve1(NG,C1),
+    append(C1,Explanation,C).
+
+/* --- solve_trill/5 --- */
+solve_trill(Role,Individual1,Individual2,T,C) :-
+	property_value_meta(Role,Individual1,Individual2,Explanation0),
+	include(is_lp_assertion,Explanation0,LPAssertions),
+    maplist(lp_assertion_to_atom,LPAssertions,Atoms),
+    %sort(Atoms0,Atoms),
+    delete(Explanation0,lpClassAssertion(_,_),Explanation1),
+    delete(Explanation1,lpPropertyAssertion(_,_,_),Explanation),
+    append(Atoms,T,NG),
+    solve1(NG,C1),
+    append(C1,Explanation,C).
 
 
 solve_not_atomic_concept([(someValuesFrom(R,C),Individual)|T],CIn,COut,GAS,GS):-
@@ -375,7 +487,7 @@ find_body(H,B,_CIn,[]) :-
 	member(B,Body).
 
 find_body(H,B,CIn,[(R,N,S)]):-
-	find_rule(H,(R,S,N),Body,CIn),
+	find_rule(H,(R,S,N),Body),
 	member(B,Body).
 */
 
@@ -564,6 +676,7 @@ compute_prob_ax1([Prob1 | T],Prob):-
 /* p(File) parses the file File.cpl. It can be called more than once without
 exiting yap */
 p(File):-
+	abolish_all_tables,
 	parse(File),!.
 
 parse(File):-

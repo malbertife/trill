@@ -1,0 +1,11 @@
+%%
+% LPAD
+%%
+/* --- */
+
+%%
+% KB
+%%
+subClassOf(someValuesFrom(commands,soldier),commander).
+subClassOf(guard,soldier).
+classAssertion(someValuesFrom(commands,guard),john).
