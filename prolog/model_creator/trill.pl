@@ -226,9 +226,18 @@ assert_all_atoms([H|T]):-
 
 findC([],[]).
 findC([(A,_)|T],C):-
-	findall(At,(findClassAssertion(C,I,_,A),atom(C),At=..[C,I]),L),
+	findall(At,(findClassAssertion(C,I,_,A),atom_or_nothing(C,I,At)),L),
 	findC(T,C0),
 	append(L,C0,C).
+
+atom_or_nothing(C,I,At):-
+	atom(C),!,
+	At=..[C,I].
+
+atom_or_nothing(complementOf(C),I,(\+At)):-!,
+	At=..[C,I].
+	
+	
 
 /***********
   Queries
@@ -732,7 +741,7 @@ clash((ABox,_),Expl):-
 
 clash((ABox,_),Expl):-
   %write('clash 6'),nl,
-  findClassAssertion("http://www.w3.org/2002/07/owl#Nothing",_Ind,Expl,ABox).
+  findClassAssertion('http://www.w3.org/2002/07/owl#Nothing',_Ind,Expl,ABox).
 
 /*
 clash((ABox,Tabs),Expl):-
