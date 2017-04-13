@@ -19,7 +19,7 @@ details.
                  unsat/1, unsat/2, prob_unsat/2,
                  inconsistent_theory/0, inconsistent_theory/1, prob_inconsistent_theory/1,
                  axiom/1, add_kb_prefix/2, add_kb_prefixes/1, add_axiom/1, add_axioms/1, remove_kb_prefix/2, remove_kb_prefix/1, remove_axiom/1, remove_axioms/1,
-                 load_kb/1, load_owl_kb/1] ).
+                 load_kb/1, load_owl_kb/1, dl_models/3] ).
 
 %:- set_prolog_flag(unknow,fail).
 
@@ -2675,6 +2675,7 @@ sandbox:safe_primitive(trill:add_axiom(_)).
 sandbox:safe_primitive(trill:add_axioms(_)).
 sandbox:safe_primitive(trill:load_kb(_)).
 sandbox:safe_primitive(trill:load_owl_kb(_)).
+sandbox:safe_primitive(trill:dl_models(_,_,_)).
 
 :- use_module(translate_rdf).
 
