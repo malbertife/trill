@@ -2,13 +2,23 @@
 :-use_module(library(lambda)).
 :-use_module(trill).
 
-rules([rule(p(a),[not(d(a)),o(a)]),
+rules(e1,[rule(p(a),[not(d(a)),o(a)]),
        rule(p(b),[not(d(b)),o(b)]),
        rule(e(a),[not(e(a)),o(a)]),
        rule(e(b),[not(e(b)),o(b)]),
        rule(o(b),[]),
        rule(o(a),[])]).
-axioms([classAssertion(c,b),subClassOf(c,d),equivalentClasses([c,complementOf(e)])]).
+axioms(e1,[classAssertion(c,b),subClassOf(c,d),equivalentClasses([c,complementOf(e)])]).
+
+rules(e2,[rule(p(a),[not(p(a))]),
+       rule(q(a),[]),
+       rule(r(a),[not(r(a))])]).
+axioms(e2,[subClassOf(q,complementOf(r))]).
+
+rules(e3,[rule(exp(tts),[]),
+	 rule(rec(tts),[cd(tts),not(owns(tts)),not(lowEval(tts)),int(tts)]),
+	 rule(int(tts),[])]).
+axioms(e3,[subClassOf(exp,complementOf(rec)),classAssertion(cd,tts)]).
 
 removeNegations([],_,[]).
 removeNegations([not(A)|_],S,_):-
@@ -43,7 +53,7 @@ gammaPrime(kb(O,P),KA,S,S2):-
 		    removeNegations(Body,S,Body1)
 		),
 		P1),
-	d(O,KA,S,A),
+	dl_models(O,S,A),
 	findall(N,member(neg(N),A),Ns),
 	include(\Rule^(Rule=rule(H,_),
 		      \+member(H,Ns)),
@@ -57,7 +67,7 @@ wfm(kb(O,P),KA,Pos,Neg,FPos,FNeg):-
 	(   (subset(Pos1,Pos),
 	     subset(Neg,Neg1))->
 	Pos1 = FPos,
-	    Neg1=FNeg;
+	subtract(KA,Neg1,FNeg);
 	wfm(kb(O,P),KA,Pos1,Neg1,FPos,FNeg)).
 
 wfm(kb(O,P),Pos,Neg):-
@@ -108,3 +118,8 @@ minM(P,I,I):-
 minM(P,I,I1):-
 	r(P,I,I2),
 	minM(P,I2,I1).
+
+example(T,Pos,Neg):-
+	axioms(T,O),
+	rules(T,P),
+	wfm(kb(O,P),Pos,Neg).
