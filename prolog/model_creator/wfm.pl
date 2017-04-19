@@ -531,6 +531,8 @@ builtin(max_list(_L,_Max)).
 builtin(min_list(_L,_Max)).
 
 
+:-dynamic setting/2.
+
 setting(epsilon,0.00001).
 setting(ground_body,true).
 /* available values: true, false
