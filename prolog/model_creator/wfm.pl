@@ -232,9 +232,7 @@ instantiate([r(_V,H)|T],CIn,COut):-
 
 instantiate_clause_modes(H,B,BOut):-
 	instantiate_head_modes(H),
-	list2and(BL,B),
-	instantiate_body_modes(BL,BLOut),
-	list2and(BLOut,BOut).
+	instantiate_body_modes(B,BOut).
 
 
 instantiate_head_modes([]):-!.
@@ -292,13 +290,11 @@ instantiate_args_modes([H|T],[TH|TT]):-
 
 
 instantiate_clause_variables([],_H,B,BOut):-
-	list2and(BL,B),
 	(wfm_setting(ground_body,true)->
-		check_body(BL,BLOut)
+		check_body(B,BOut)
 	;
-		BLOut=BL
-	),
-	list2and(BLOut,BOut).
+		BOut=B
+	).
 
 instantiate_clause_variables([VarName=Var|T],H,BIn,BOut):-
 	universe(VarNames,U),
@@ -344,28 +340,31 @@ process_clauses(L,LResult):-
 
 process_clauses([(end_of_file,[])],_,[]).
 
-process_clauses([((H:-B),V)|T],ProbAnnotAx,[r(V,HL,B)|T1]):-
+process_clauses([((H:-B),V)|T],ProbAnnotAx,[r(V,HL,BL)|T1]):-
 	H=(_;_),!,
 	list2or(HL1,H),
+	list2and(BL,B),
 	process_head(HL1,0,HL,_HLPList),
 	process_clauses(T,ProbAnnotAx,T1).
 
-process_clauses([((H:-B),V)|T],ProbAnnotAx,[r(V,HL,B)|T1]):-
+process_clauses([((H:-B),V)|T],ProbAnnotAx,[r(V,HL,BL)|T1]):-
 	H=(_:_),!,
 	list2or(HL1,H),
+	list2and(BL,B),
 	process_head(HL1,0,HL,_HLPList),
 	process_clauses(T,ProbAnnotAx,T1).
 
-process_clauses([((H:-B),V)|T],ProbAnnotAx,[r(V,[H:1],B)|T1]):-!,
+process_clauses([((H:-B),V)|T],ProbAnnotAx,[r(V,[H:1],BL)|T1]):-!,
+	list2and(BL,B),
 	process_clauses(T,ProbAnnotAx,T1).
 
-process_clauses([(H,V)|T],ProbAnnotAx,[r(V,HL,true)|T1]):-
+process_clauses([(H,V)|T],ProbAnnotAx,[r(V,HL,[])|T1]):-
 	H=(_;_),!,
 	list2or(HL1,H),
 	process_head(HL1,0,HL,_HLPList),
 	process_clauses(T,ProbAnnotAx,T1).
 
-process_clauses([(H,V)|T],ProbAnnotAx,[r(V,HL,true)|T1]):-
+process_clauses([(H,V)|T],ProbAnnotAx,[r(V,HL,[])|T1]):-
 	H=(_:_),!,
 	list2or(HL1,H),
 	process_head(HL1,0,HL,_HLPList),
@@ -377,7 +376,7 @@ process_clauses([(H,V)|T],ProbAnnotAx,[r(V,HL)|T1]):-
 	process_axiom(H,ProbAnnotAx,HL),
 	process_clauses(T,ProbAnnotAx,T1).
 
-process_clauses([(H,V)|T],ProbAnnotAx,[r(V,[H:1],true)|T1]):-
+process_clauses([(H,V)|T],ProbAnnotAx,[r(V,[H:1],[])|T1]):-
 	process_clauses(T,ProbAnnotAx,T1).
 
 remove_prob_annot_ax([],[],[]).
