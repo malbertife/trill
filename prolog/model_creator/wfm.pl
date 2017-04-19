@@ -20,16 +20,16 @@ rules(e3,[rule(exp(tts),[]),
 	 rule(int(tts),[])]).
 axioms(e3,[subClassOf(exp,complementOf(rec)),classAssertion(cd,tts)]).
 
-removeNegations([],_,[]).
-removeNegations([not(A)|_],S,_):-
+bodyReduct([],_,[]).
+bodyReduct([not(A)|_],S,_):-
 	member(A,S),
 	!,
 	fail.
-removeNegations([not(_)|T],S,B):-
+bodyReduct([not(_)|T],S,B):-
 	!,
-	removeNegations(T,S,B).
-removeNegations([H|T],S,[H|B]):-
-	removeNegations(T,S,B).
+	bodyReduct(T,S,B).
+bodyReduct([H|T],S,[H|B]):-
+	bodyReduct(T,S,B).
 
 minMod(kb(O,P),KA,M):-
 	minMod(kb(O,P),KA,[],M).
@@ -39,25 +39,26 @@ minMod(KB,KA,S,M):-
 	    S=M;
 	    minMod(KB,KA,M1,M)).
 
+kbReduct(kb(O,P),S,kb(O,P1)):-
+		findall(rule(Head,Body1),
+		(   member(rule(Head,Body),P),
+		    bodyReduct(Body,S,Body1)
+		),
+		P1).
 
-gamma(kb(O,P),KA,S,S2):-
-	findall(rule(Head,Body1),
-		(   member(rule(Head,Body),P),
-		    removeNegations(Body,S,Body1)
-		),
-		P1),
-	minMod(kb(O,P1),KA,S2).
-gammaPrime(kb(O,P),KA,S,S2):-
-	findall(rule(Head,Body1),
-		(   member(rule(Head,Body),P),
-		    removeNegations(Body,S,Body1)
-		),
-		P1),
+kbReduct2(kb(O,P),S,kb(O,P2)):-
+	kbReduct(kb(O,P),S,kb(O,P1)),
 	dl_models(O,S,A),
 	findall(N,member(neg(N),A),Ns),
 	include(\Rule^(Rule=rule(H,_),
 		      \+member(H,Ns)),
-		P1,P2),
+		P1,P2).
+
+gamma(kb(O,P),KA,S,S2):-
+	kbReduct(kb(O,P),S,kb(O,P1)),
+	minMod(kb(O,P1),KA,S2).
+gammaPrime(kb(O,P),KA,S,S2):-
+	kbReduct2(kb(O,P),S,kb(O,P2)),
 	minMod(kb(O,P2),KA,S2).
 
 
@@ -90,9 +91,9 @@ posAtoms(rule(H,B),A):-
 	maplist(posAtom,[H|B],A1),
 	removeDuplicates(A1,A).
 
-ka(Rules,K):-foldl(\Rule^K1^K2^(posAtoms(Rule,A),
+ka(kb(_,Rules),KA):-foldl(\Rule^K1^K2^(posAtoms(Rule,A),
 				union(A,K1,K2)),
-		   Rules,[],K).
+		   Rules,[],KA).
 
 
 r(P,S,C):-
@@ -123,3 +124,21 @@ example(T,Pos,Neg):-
 	axioms(T,O),
 	rules(T,P),
 	wfm(kb(O,P),Pos,Neg).
+
+kb(Ident,kb(O,P)):-
+	axioms(Ident,O),
+	rules(Ident,P).
+
+test_ka(Ident,KA):-
+	kb(Ident,KB),
+	ka(KB,KA).
+
+testReductKA(Ident,R):-
+	kb(Ident,KB),
+	ka(KB,KA),
+	kbReduct(KB,KA,R).
+
+
+testReductEmpty(Ident,R):-
+	kb(Ident,KB),
+	kbReduct2(KB,[],R).
