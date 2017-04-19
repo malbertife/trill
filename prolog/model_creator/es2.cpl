@@ -1,0 +1,8 @@
+p(X):-not(d(X)),o(X).
+d(X):0.7;e(X):0.3:-o(X).
+o(b).
+o(a).
+classAssertion(c,b).
+subClassOf(c,d).
+subClassOf(intersectionOf([c,e]),p).
+annotationAssertion('https://sites.google.com/a/unife.it/ml/disponte#probability',subClassOf(intersectionOf([c,e]),p),literal('0.2')).

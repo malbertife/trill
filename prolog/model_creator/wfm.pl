@@ -156,7 +156,7 @@ testReductEmpty(Ident,R):-
 	kb(Ident,KB),
 	kbReduct2(KB,[],R).
 
-worldWfm(world(Rules,Axioms,_),WFM):-
+worldWfm(world(Rules,Axioms,Prob),worldWfm(kb(Axioms,Rules),Prob,WFM)):-
 	wfm(kb(Axioms,Rules),WFM).
 
 wfms(FileName,WFMs):-
@@ -554,3 +554,92 @@ wfm_setting(grounding,variables).
 if set to variables, the universe facts from the .uni file are used
 if set to modes, the mode and type declaration from the .uni file are used
 */
+inv_string_concat(A,B,C):-
+	string_concat(B,A,C).
+
+listStringConcat(L,S):-
+	foldl(inv_string_concat,L,"",S).
+
+toLatex(worldWfm(kb(Axioms,Rules),Prob,WFM),L):-
+	axiomsToLatex(Axioms,AxiomsL),
+	rulesToLatex(Rules,RulesL),
+	atom_string(Prob,ProbS),
+	wfmToLatex(WFM,WFML),
+	listStringConcat([AxiomsL,"&",
+			  RulesL,"&",
+			  ProbS,"&",
+			  WFML,"\\\\"],
+			 L).
+
+infix(C1,C2,Op,L):-
+ axiomToLatex(C1,C1L),
+	axiomToLatex(C2,C2L),
+	listStringConcat([C1L,
+			  Op,
+			  C2L],
+			L).
+
+
+infixOp(subClassOf," \\subseteq ").
+infixOp(classAssertion," \\in ").
+
+listOp(intersectionOf," \\cup ").
+
+
+list(Args,Op,L):-
+	maplist(axiomToLatex,Args,ArgsL),
+	join(ArgsL,Op,L).
+
+axiomsToLatex(Axioms,L):-
+	maplist(axiomToLatex,Axioms,AxiomsL),
+	join(AxiomsL,",",L).
+
+rulesToLatex(Rules,L):-
+	maplist(ruleToLatex,Rules,RulesL),
+	join(RulesL,".",L).
+
+wfmToLatex(wfm(P,N),L):-
+	term_string(P,PL),
+	term_string(N,NL),
+	string_concat(PL,NL,L).
+
+
+axiomToLatex(A,L):-
+     A=..[Op,A1,A2],
+     infixOp(Op,S),
+     !,
+     infix(A1,A2,S,L).
+
+axiomToLatex(A,L):-
+	A=..[Op,Args],
+	listOp(Op,S),
+	!,
+	list(Args,S,L).
+
+axiomToLatex(C,CL):-
+	atom_string(C,CL).
+
+literalToLatex(not(A),LS):-
+	!,
+	term_string(A,S),
+	string_concat("\\mnot ",S,LS).
+literalToLatex(A,LA):-
+	term_string(A,LA).
+
+
+
+join([],_,""):-
+	!.
+join([A],_,A):-
+	!.
+join([H|T],Sep,S):-
+	join(T,Sep,ST),
+	listStringConcat([H,Sep,ST],S).
+
+ruleToLatex(r(H,B),L):-
+	term_string(H,HS),
+	maplist(literalToLatex,B,BS),
+	join(BS,",",BS1),
+	listStringConcat([HS," \\leftarrow ",BS1],L).
+
+
