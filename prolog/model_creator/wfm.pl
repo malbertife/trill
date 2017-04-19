@@ -199,7 +199,7 @@ create_single_world([r(H)|T],PIn,world(TR,Res,P)):-!,
 	
 
 %=============================================
-s(_Goal,File,Worlds) :-
+s(File,Worlds) :-
 	atom_concat(File,'.cpl',FilePl),
 	open(FilePl,read,S),
 	read_clauses(S,C),
