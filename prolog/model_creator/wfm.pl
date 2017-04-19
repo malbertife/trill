@@ -188,7 +188,7 @@ create_single_world([rule(H,B)|T],PIn,world([rule(H,B)|TR],TA,P)):-!,
 	create_single_world(T,PIn,world(TR,TA,P)).
 create_single_world([A|T],PIn,world(TR,[A|TA],P)):-
 	A\=rule(_,_),
-	member(annotationAssertion('https://sites.google.com/a/unife.it/ml/disponte#probability',A,Pr),T),!,
+	member(annotationAssertion('https://sites.google.com/a/unife.it/ml/disponte#probability',A,literal(Pr)),T),!,
 	P1 is PIn*Pr,
 	create_single_world(T,P1,world(TR,TA,P)).
 create_single_world([A|T],PIn,world(TR,[A|TA],P)):-
