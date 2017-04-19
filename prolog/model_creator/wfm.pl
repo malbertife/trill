@@ -6,29 +6,29 @@
 :-discontiguous axioms/2.
 
 
-rules(e1,[rule(p(a):0.6;r(a):0.4,[not(d(a)),o(a)]),
-       rule(p(b):0.6;r(b):0.4,[not(d(b)),o(b)]),
-       rule(e(a),[not(e(a)),o(a)]),
-       rule(e(b),[not(e(b)),o(b)]),
-       rule(o(b),[]),
-       rule(o(a),[])]).
+rules(e1,[r(p(a):0.6;r(a):0.4,[not(d(a)),o(a)]),
+       r(p(b):0.6;r(b):0.4,[not(d(b)),o(b)]),
+       r(e(a),[not(e(a)),o(a)]),
+       r(e(b),[not(e(b)),o(b)]),
+       r(o(b),[]),
+       r(o(a),[])]).
 axioms(e1,[classAssertion(c,b),subClassOf(c,d),equivalentClasses([c,complementOf(e)]),annotationAssertion('https://sites.google.com/a/unife.it/ml/disponte#probability',subClassOf(c,d),literal(0.2))]).
 
 
-rules(e2,[rule(p(a),[not(p(a))]),
-       rule(q(a),[]),
-       rule(r(a),[not(r(a))])]).
+rules(e2,[r(p(a),[not(p(a))]),
+       r(q(a),[]),
+       r(r(a),[not(r(a))])]).
 axioms(e2,[subClassOf(q,complementOf(r))]).
 
-rules(e3,[rule(exp(tts),[]),
-	 rule(rec(tts),[cd(tts),not(owns(tts)),not(lowEval(tts)),int(tts)]),
-	 rule(int(tts),[])]).
+rules(e3,[r(exp(tts),[]),
+	 r(rec(tts),[cd(tts),not(owns(tts)),not(lowEval(tts)),int(tts)]),
+	 r(int(tts),[])]).
 axioms(e3,[subClassOf(exp,complementOf(rec)),classAssertion(cd,tts)]).
 
-rules(e4,[rule(p(X),[not(d(X)),o(X)]),
-	 rule(d(X):0.7;e(X):0.3,[o(X)]),
-	 rule(o(a),[]),
-	 rule(o(b),[])]).
+rules(e4,[r(p(X),[not(d(X)),o(X)]),
+	 r(d(X):0.7;e(X):0.3,[o(X)]),
+	 r(o(a),[]),
+	 r(o(b),[])]).
 axioms(e4,[subclassOf(c,d),
 	   subClassOf(intersectionOf(c,e),p),
 	   annotationAssertion('https://sites.google.com/a/unife.it/ml/disponte#probability',subClassOf(intersectionOf(c,e),p),literal(0.2))]).
@@ -53,8 +53,8 @@ minMod(KB,KA,S,M):-
 	    minMod(KB,KA,M1,M)).
 
 kbReduct(kb(O,P),S,kb(O,P1)):-
-		findall(rule(Head,Body1),
-		(   member(rule(Head,Body),P),
+		findall(r(Head,Body1),
+		(   member(r(Head,Body),P),
 		    bodyReduct(Body,S,Body1)
 		),
 		P1).
@@ -63,7 +63,7 @@ kbReduct2(kb(O,P),S,kb(O,P2)):-
 	kbReduct(kb(O,P),S,kb(O,P1)),
 	dl_models(O,S,A),
 	findall(N,member(neg(N),A),Ns),
-	include(\Rule^(Rule=rule(H,_),
+	include(\Rule^(Rule=r(H,_),
 		      \+member(H,Ns)),
 		P1,P2).
 
@@ -84,7 +84,7 @@ wfm(kb(O,P),KA,Pos,Neg,FPos,FNeg):-
 	subtract(KA,Neg1,FNeg);
 	wfm(kb(O,P),KA,Pos1,Neg1,FPos,FNeg)).
 
-wfm(kb(O,P),Pos,Neg):-
+wfm(kb(O,P),wfm(Pos,Neg)):-
 	ka(P,KA),
 	wfm(kb(O,P),KA,[],KA,Pos,Neg).
 
@@ -100,18 +100,18 @@ removeDuplicates([H|T],R):-
 removeDuplicates([H|T],[H|R]):-
 	removeDuplicates(T,R).
 
-posAtoms(rule(H,B),A):-
+posAtoms(r(H,B),A):-
 	maplist(posAtom,[H|B],A1),
 	removeDuplicates(A1,A).
 
-ka(kb(_,Rules),KA):-foldl(\Rule^K1^K2^(posAtoms(Rule,A),
+ka(Rules,KA):-foldl(\Rule^K1^K2^(posAtoms(Rule,A),
 				union(A,K1,K2)),
 		   Rules,[],KA).
 
 
 r(P,S,C):-
 	findall(H,(
-		member(rule(H,B),P), subset(B,S)),
+		member(r(H,B),P), subset(B,S)),
 		Hs),
 	union(S,Hs,C).
 d(O,S,KA,C):-
@@ -156,7 +156,12 @@ testReductEmpty(Ident,R):-
 	kb(Ident,KB),
 	kbReduct2(KB,[],R).
 
+worldWfm(world(Rules,Axioms,_),WFM):-
+	wfm(kb(Axioms,Rules),WFM).
 
+wfms(FileName,WFMs):-
+	s(FileName,Worlds),
+	maplist(worldWfm,Worlds,WFMs).
 
 
 
@@ -170,15 +175,15 @@ create_single_world([r(H,B)|T],PIn,world([r(HA,B)|TR],TA,P)):-
 	member((HA:Pr),H),
 	P1 is PIn*Pr,
 	create_single_world(T,P1,world(TR,TA,P)).
-	
+
 create_single_world([r(H)|T],PIn,world(TR,Res,P)):-!,
 	member((HA:Pr),H),
 	P1 is PIn*Pr,
 	create_single_world(T,P1,world(TR,TA,P)),
 	(HA = '' -> Res = TA ; Res = [HA|TA]).
-	
-	
-	
+
+
+
 
 %=============================================
 s(File,Worlds) :-
@@ -191,16 +196,16 @@ s(File,Worlds) :-
 		 (exists_file(FileUni) ->
 			consult(FileUni)
 		  ;
-		  	true
+			true
 		 )
 		)
 	  ;
-	  	true
+		true
 	),
 	process_clauses(C,ClausesVar),
 	instantiate(ClausesVar,[],Clauses),!,
 	create_worlds(Clauses,Worlds).
-	/* qua si può richiamare 
+	/* qua si può richiamare
 	   create_single_world(Clauses,1,World)
 	   che restituisce un solo mondo, quindi puoi
 	   attaccare wfm su questo singolo mondo
