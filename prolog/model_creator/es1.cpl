@@ -1,0 +1,8 @@
+p(X):0.6;r(X):0.4:-not(d(X)),o(X).
+e(X):-not(e(X)),o(X).
+o(b).
+o(a).
+classAssertion(c,b).
+subClassOf(c,d).
+equivalentClasses([c,complementOf(e)]).
+annotationAssertion('https://sites.google.com/a/unife.it/ml/disponte#probability',subClassOf(c,d),literal('0.2')).
