@@ -186,7 +186,7 @@ s(File,Worlds) :-
 	open(FilePl,read,S),
 	read_clauses(S,C),
 	close(S),
-	(setting(universe,true) ->
+	(wfm_setting(universe,true) ->
 		(atom_concat(File,'.uni',FileUni),
 		 (exists_file(FileUni) ->
 			consult(FileUni)
@@ -218,7 +218,7 @@ instantiate([],C,C).
 %	instantiate(T,C1,COut).
 
 instantiate([r(V,H,B)|T],CIn,COut):-
-	(setting(grounding,variables)->
+	(wfm_setting(grounding,variables)->
 		findall(r(H,BOut),instantiate_clause_variables(V,H,B,BOut),L)
 	;
 		findall(r(H,BOut),instantiate_clause_modes(H,B,BOut),L)
@@ -245,7 +245,7 @@ instantiate_head_modes([H:_P|T]):-
 
 
 instantiate_body_modes(BL,BL):-
-	setting(ground_body,false),!.
+	wfm_setting(ground_body,false),!.
 
 instantiate_body_modes(BL0,BL):-
 	instantiate_list_modes(BL0,BL).
@@ -293,7 +293,7 @@ instantiate_args_modes([H|T],[TH|TT]):-
 
 instantiate_clause_variables([],_H,B,BOut):-
 	list2and(BL,B),
-	(setting(ground_body,true)->
+	(wfm_setting(ground_body,true)->
 		check_body(BL,BLOut)
 	;
 		BLOut=BL
@@ -391,7 +391,7 @@ remove_prob_annot_ax([H|T],T1,[H|T2]):-
 process_head([H:PH],P,[H:PH1|Null],[Pred/Arity]):-
 	PH1 is PH,
 	PNull is 1-P-PH1,
-	setting(epsilon,Eps),
+	wfm_setting(epsilon,Eps),
 	EpsNeg is - Eps,
 	PNull > EpsNeg,
 	(PNull>Eps->
@@ -423,7 +423,7 @@ process_axiom(Ax,ProbAnnotAx,H):-
 	read Clauses from stream S
 */
 read_clauses(S,Clauses):-
-	(setting(ground_body,true)->
+	(wfm_setting(ground_body,true)->
 		read_clauses_ground_body(S,Clauses)
 	;
 		read_clauses_exist_body(S,Clauses)
@@ -531,21 +531,21 @@ builtin(max_list(_L,_Max)).
 builtin(min_list(_L,_Max)).
 
 
-:-dynamic setting/2.
+:-dynamic wfm_setting/2.
 
-setting(epsilon,0.00001).
-setting(ground_body,true).
+wfm_setting(epsilon,0.00001).
+wfm_setting(ground_body,true).
 /* available values: true, false
 if true, both the head and the body of each clause will be grounded, otherwise
 only the head is grounded. In the case in which the body contains variables
 not appearing in the head, the body represents an existential event */
 
-setting(universe,true).
+wfm_setting(universe,true).
 /* available values: true, false
 if true, universe file is used
 */
 
-setting(grounding,variables).
+wfm_setting(grounding,variables).
 /* available values: variables, modes
 if set to variables, the universe facts from the .uni file are used
 if set to modes, the mode and type declaration from the .uni file are used
