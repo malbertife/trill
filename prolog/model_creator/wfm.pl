@@ -157,29 +157,11 @@ testReductEmpty(Ident,R):-
 	kbReduct2(KB,[],R).
 
 
-create_worlds(P,L):-
-	create_world_int(P,L).
-
-man_rule(P,R):-
-	rules(P,L),
-	man_rule_int(L,R).
-
-man_rule_int([],[]).
-man_rule_int([rule(H,B)|T1],[rule(HL,B)|T2]):-
-	H=(_;_),!,
-	list2or(HL,H),
-	man_rule_int(T1,T2).
-man_rule_int([rule(H,B)|T1],[rule(H1,B)|T2]):-
-	is_list(H),!,
-	H=[HX],
-	(HX=(_:_)->H1=HX;H1=(HX:1)),
-	man_rule_int(T1,T2).
-man_rule_int([rule(H,B)|T1],[rule([H1],B)|T2]):-
-    (H=(_:_)->H1=H;H1=(H:1)),
-	man_rule_int(T1,T2).
 
 
-create_world_int(C,L):-
+
+%=============================================
+create_worlds(C,L):-
 	findall(W,create_single_world(C,1,W),L).
 
 create_single_world([],P,world([],[],P)).
@@ -218,6 +200,11 @@ s(File,Worlds) :-
 	process_clauses(C,ClausesVar),
 	instantiate(ClausesVar,[],Clauses),!,
 	create_worlds(Clauses,Worlds).
+	/* qua si può richiamare 
+	   create_single_world(Clauses,1,World)
+	   che restituisce un solo mondo, quindi puoi
+	   attaccare wfm su questo singolo mondo
+	*/
 
 /* predicates for producing the ground instances of program clauses */
 
