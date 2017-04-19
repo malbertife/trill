@@ -2,6 +2,10 @@
 :-use_module(library(lambda)).
 :-use_module(trill).
 
+:-discontiguous rules/2.
+:-discontiguous axioms/2.
+
+
 rules(e1,[rule(p(a):0.6;r(a):0.4,[not(d(a)),o(a)]),
        rule(p(b):0.6;r(b):0.4,[not(d(b)),o(b)]),
        rule(e(a),[not(e(a)),o(a)]),
@@ -19,6 +23,14 @@ rules(e3,[rule(exp(tts),[]),
 	 rule(rec(tts),[cd(tts),not(owns(tts)),not(lowEval(tts)),int(tts)]),
 	 rule(int(tts),[])]).
 axioms(e3,[subClassOf(exp,complementOf(rec)),classAssertion(cd,tts)]).
+
+rules(e4,[rule(p(X),[not(d(X)),o(X)]),
+	 rule(d(X):0.7;e(X):0.3,[o(X)]),
+	 rule(o(a),[]),
+	 rule(o(b),[])]).
+axioms(e4,[subclassOf(c,d),
+	   subClassOf(intersectionOf(c,e),p),
+	   annotationAssertion('https://sites.google.com/a/unife.it/ml/disponte#probability',subClassOf(intersectionOf(c,e),p),literal(0.2))]).
 
 bodyReduct([],_,[]).
 bodyReduct([not(A)|_],S,_):-
@@ -142,7 +154,7 @@ testReductKA(Ident,R):-
 testReductEmpty(Ident,R):-
 	kb(Ident,KB),
 	kbReduct2(KB,[],R).
-	
+
 
 create_worlds(P,L):-
 	man_rule(P,R),
