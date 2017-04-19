@@ -2,8 +2,8 @@
 :-use_module(library(lambda)).
 :-use_module(trill).
 
-rules(e1,[rule(p(a),[not(d(a)),o(a)]),
-       rule(p(b),[not(d(b)),o(b)]),
+rules(e1,[rule(p(a):0.6;r(a):0.4,[not(d(a)),o(a)]),
+       rule(p(b):0.6;r(b):0.4,[not(d(b)),o(b)]),
        rule(e(a),[not(e(a)),o(a)]),
        rule(e(b),[not(e(b)),o(b)]),
        rule(o(b),[]),
@@ -142,3 +142,57 @@ testReductKA(Ident,R):-
 testReductEmpty(Ident,R):-
 	kb(Ident,KB),
 	kbReduct2(KB,[],R).
+	
+
+create_worlds(P,L):-
+	man_rule(P,R),
+	axioms(P,A),
+	append(R,A,C),
+	create_world_int(C,L).
+
+man_rule(P,R):-
+	rules(P,L),
+	man_rule_int(L,R).
+
+man_rule_int([],[]).
+man_rule_int([rule(H,B)|T1],[rule(HL,B)|T2]):-
+	H=(_;_),!,
+	list2or(HL,H),
+	man_rule_int(T1,T2).
+man_rule_int([rule(H,B)|T1],[rule(H1,B)|T2]):-
+	is_list(H),!,
+	H=[HX],
+	(HX=(_:_)->H1=HX;H1=(HX:1)),
+	man_rule_int(T1,T2).
+man_rule_int([rule(H,B)|T1],[rule([H1],B)|T2]):-
+    (H=(_:_)->H1=H;H1=(H:1)),
+	man_rule_int(T1,T2).
+
+list2or([X],X):-
+		X\=;(_,_),!.
+
+list2or([H|T],(H ; Ta)):-!,
+		list2or(T,Ta).
+
+create_world_int(C,L):-
+	findall(W,create_single_world(C,1,W),L).
+
+create_single_world([],P,world([],[],P)).
+
+create_single_world([rule(H,B)|T],PIn,world([rule(HA,B)|TR],TA,P)):-
+	is_list(H),!,
+	member((HA:Pr),H),
+	P1 is PIn*Pr,
+	create_single_world(T,P1,world(TR,TA,P)).
+create_single_world([rule(H,B)|T],PIn,world([rule(H,B)|TR],TA,P)):-!,
+	create_single_world(T,PIn,world(TR,TA,P)).
+create_single_world([A|T],PIn,world(TR,[A|TA],P)):-
+	A\=rule(_,_),
+	member(annotationAssertion('https://sites.google.com/a/unife.it/ml/disponte#probability',A,Pr),T),!,
+	P1 is PIn*Pr,
+	create_single_world(T,P1,world(TR,TA,P)).
+create_single_world([A|T],PIn,world(TR,[A|TA],P)):-
+	A\=rule(_,_),
+	create_single_world(T,PIn,world(TR,TA,P)).
+create_single_world([annotationAssertion(_,_,_)|T],PIn,world(TR,TA,P)):-
+	create_single_world(T,PIn,world(TR,TA,P)).
