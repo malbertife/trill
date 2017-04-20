@@ -560,15 +560,30 @@ inv_string_concat(A,B,C):-
 listStringConcat(L,S):-
 	foldl(inv_string_concat,L,"",S).
 
+writeExample(Example):-
+	atom_concat(Example,'.tex',FileName),
+	open(FileName,write,Out),
+	exampleToLatex(Example,S),
+	atom_string(A,S),
+    write(Out,A),
+    close(Out).
+
+exampleToLatex(Example,S):-
+	s(Example,Worlds),
+	maplist(worldWfm,Worlds,WorldWFMs),
+	maplist(toLatex,WorldWFMs,L),
+	listStringConcat(L,S).
+
 toLatex(worldWfm(kb(Axioms,Rules),Prob,WFM),L):-
 	axiomsToLatex(Axioms,AxiomsL),
 	rulesToLatex(Rules,RulesL),
-	atom_string(Prob,ProbS),
+	ProbR is round(Prob*1000)/1000,
+	atom_string(ProbR,ProbS),
 	wfmToLatex(WFM,WFML),
 	listStringConcat([AxiomsL,"&",
 			  RulesL,"&",
 			  ProbS,"&",
-			  WFML,"\\\\"],
+			  WFML,"\\\\\\hline\n"],
 			 L).
 
 infix(C1,C2,Op,L):-
@@ -580,10 +595,11 @@ infix(C1,C2,Op,L):-
 			L).
 
 
-infixOp(subClassOf," \\subseteq ").
-infixOp(classAssertion," \\in ").
+infixInvOp(classAssertion," \\in ").
 
-listOp(intersectionOf," \\cup ").
+infixOp(subClassOf," \\dlsubclass ").
+
+listOp(intersectionOf," \\dlinters ").
 
 
 list(Args,Op,L):-
@@ -591,24 +607,38 @@ list(Args,Op,L):-
 	join(ArgsL,Op,L).
 
 axiomsToLatex(Axioms,L):-
-	maplist(axiomToLatex,Axioms,AxiomsL),
-	join(AxiomsL,",",L).
+	maplist(mathAxiomToLatex,Axioms,AxiomsL),
+	join(AxiomsL,",\\newline",L).
 
 rulesToLatex(Rules,L):-
 	maplist(ruleToLatex,Rules,RulesL),
 	join(RulesL,".",L).
 
+listToLatexSet(L,S):-
+	maplist(term_string,L,LS),
+	join(LS,", ",LS1),
+	listStringConcat(["\\{",LS1,"\\}"],S).
+
 wfmToLatex(wfm(P,N),L):-
-	term_string(P,PL),
-	term_string(N,NL),
-	string_concat(PL,NL,L).
+	listToLatexSet(P,PL),
+	listToLatexSet(N,NL),
+	listStringConcat([PL,",\\newline",NL],L).
 
-
+mathAxiomToLatex(A,L):-
+	axiomToLatex(A,S),
+	listStringConcat(["$",S,"$"],L).
 axiomToLatex(A,L):-
      A=..[Op,A1,A2],
      infixOp(Op,S),
      !,
      infix(A1,A2,S,L).
+
+axiomToLatex(A,L):-
+     A=..[Op,A1,A2],
+     infixInvOp(Op,S),
+     !,
+     infix(A2,A1,S,L).
+
 
 axiomToLatex(A,L):-
 	A=..[Op,Args],
@@ -640,6 +670,6 @@ ruleToLatex(r(H,B),L):-
 	term_string(H,HS),
 	maplist(literalToLatex,B,BS),
 	join(BS,",",BS1),
-	listStringConcat([HS," \\leftarrow ",BS1],L).
+	listStringConcat([" $",HS," \\leftarrow ",BS1,"$"],L).
 
 
