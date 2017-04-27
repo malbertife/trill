@@ -55,7 +55,8 @@
         owl2_model:lpClassAssertion/1,
         owl2_model:lpClassAssertion/2,
 	owl2_model:lpPropertyAssertion/1,
-        owl2_model:lpPropertyAssertion/2.
+        owl2_model:lpPropertyAssertion/2,
+	owl2_model:lpIndividuals/1.
 
 
 :- thread_local
@@ -547,17 +548,31 @@ not_already_found([_H|T],Q,E):-
 
 findClassAssertion(C,Ind,Expl1,ABox):-
 	find((classAssertion(C,Ind),Expl1),ABox).
+findClassAssertion('Thing',Ind,[],ABox):-
+	findInd(Ind,ABox),
+	\+ find((classAssertion('Thing',Ind),_),ABox).
 findClassAssertion(C,Ind,[lpClassAssertion(C,Ind)],ABox):-
 	(   ground(Ind) -> true;
-	find((classAssertion(_,Ind),_),ABox)),
+	findInd(Ind,ABox)),
 	owl2_model:lpClassAssertion(C).
 
 findPropertyAssertion(R,Ind1,Ind2,Expl1,ABox):-
 	find((propertyAssertion(R,Ind1,Ind2),Expl1),ABox).
 findPropertyAssertion(R,Ind1,Ind2,[lpPropertyAssertion(R,Ind1,Ind2)],ABox):-
 	(   (ground(Ind1),ground(Ind2)) -> true;
-	find((propertyAssertion(_,Ind1,Ind2),_),ABox)),
+	findInd(Ind1,ABox),
+	findInd(Ind2,ABox)),
 	owl2_model:lpPropertyAssertion(R).
+
+findInd(Ind,ABox):-
+	find((classAssertion(_,Ind),_),ABox).
+findInd(Ind,ABox):-
+	find((propertyAssertion(_,Ind,_Ind2),_),ABox).
+findInd(Ind,ABox):-
+	find((propertyAssertion(_,_Ind1,Ind),_),ABox).
+findInd(Ind,_):-
+	owl2_model:lpIndividuals(L),
+	member(Ind,L).
 
 
 /*****************************

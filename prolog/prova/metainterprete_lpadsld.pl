@@ -337,7 +337,8 @@ solve_neg(H,T,CIn,COut, GAS,GS) :-
     (member(nbf(H),GAS) -> solve(T,CIn,COut, GAS,GS)
         ;
 	(list2and(HL,H),
-	 (setof(Expl,solve(HL,[],Expl, GAS,GAS1),CN) -> %% GAS1 da gestire meglio
+	 (findall(Expl,solve(HL,[],Expl, GAS,GAS1),CN0) -> %% GAS1 da gestire meglio
+	 	sort(CN0,CN),
 		append(CIn,[nbf(CN)],C1),
 		solve(T,C1,COut, [nbf(H)|GAS1],GS)
 	  ;
@@ -691,8 +692,7 @@ parse(File):-
 	trill:add_kb_prefix('disponte','https://sites.google.com/a/unife.it/ml/disponte#'),
 	process_clauses(C,1,[]).
 
-process_clauses([(end_of_file,[])],_N,LPList):-!,
-	assert_lp_axioms(LPList).
+process_clauses([(end_of_file,[])],_N,LPList):-!,	assert_lp_axioms(LPList).
 
 process_clauses([(H,_V)|T],N,LPList):-
 	H =.. [kb_prefix,A,B],!,
@@ -784,7 +784,8 @@ process_clauses([(H,V)|T],N,LPList0):-
 process_clauses([(H,_V)|T],N,LPList0):-
 	assert(def_rule(H,[])),
 	functor(H,Pred,Arity),
-	append(LPList0,[Pred/Arity],LPList),
+	H=..[Pred|Args],
+	append(LPList0,[Pred/Arity-Args],LPList),
 	process_clauses(T,N,LPList).
 
 
@@ -799,19 +800,43 @@ assert_rules([H:P|T],Pos,HL,BL,NH,N,V1):-
 
 /* asserts lpClassAssertion and lpPropertyAssertion following the clauses */
 /* PER TUTTE O DEVO CONTROLLARE CHE SIANO SOLO a(X):-b(X). r(X,Y):-s(X,Y).???? */
-assert_lp_axioms([]).
+assert_lp_axioms(L):-
+	assert_lp_axioms(L,I),
+	sort(I,Inds),
+	owl2_model:create_and_assert_axioms(lpIndividuals,[Inds]).
 
-assert_lp_axioms([P/1|T]):- !,
+assert_lp_axioms([],[]).
+
+assert_lp_axioms([P/1|T],I):- !,
 	owl2_model:create_and_assert_axioms(lpClassAssertion,[P]),
-	assert_lp_axioms(T).
+	assert_lp_axioms(T,I).
 
-assert_lp_axioms([P/2|T]):- !,
+assert_lp_axioms([P/2|T],I):- !,
 	owl2_model:create_and_assert_axioms(lpPropertyAssertion,[P]),
-	assert_lp_axioms(T).
+	assert_lp_axioms(T,I).
 
-assert_lp_axioms([_P/_A|T]):-
-	assert_lp_axioms(T).
+assert_lp_axioms([P/1-[A]|T],[A|I]):- !,
+	ground(A),
+	owl2_model:create_and_assert_axioms(lpClassAssertion,[P]),
+	assert_lp_axioms(T,I).
 
+assert_lp_axioms([P/2-L|T],I):- !,
+	extract_ground(L,L1),
+	owl2_model:create_and_assert_axioms(lpPropertyAssertion,[P]),
+	assert_lp_axioms(T,I0),
+	append(L1,I0,I).
+
+assert_lp_axioms([_P/_A-L|T],I):-
+	extract_ground(L,L1),
+	assert_lp_axioms(T,I0),
+	append(L1,I0,I).
+
+extract_ground([],[]).
+extract_ground([H|T],[H|T1]):-
+	ground(H),!,
+	extract_ground(T,T1).
+extract_ground([_H|T],T1):-
+	extract_ground(T,T1).
 
 /* if the annotation in the head are not ground, the null atom is not added
 and the eventual formulas are not evaluated */
@@ -829,7 +854,7 @@ ground_prob([_H:PH|T]):-
 	ground(PH),
 	ground_prob(T).
 
-process_head_ground([H:PH],P,[H:PH1|Null],[Pred/Arity]):-
+process_head_ground([H:PH],P,[H:PH1|Null],[Pred/Arity-Args]):-
 	PH1 is PH,
 	PNull is 1-P-PH1,
 	setting(epsilon,Eps),
@@ -840,12 +865,14 @@ process_head_ground([H:PH],P,[H:PH1|Null],[Pred/Arity]):-
 	;
 		Null=[]
 	),
-	functor(H,Pred,Arity).
+	functor(H,Pred,Arity),
+	H=..[Pred|Args].
 
-process_head_ground([H:PH|T],P,[H:PH1|NT],[Pred/Arity|LPList]):-
+process_head_ground([H:PH|T],P,[H:PH1|NT],[Pred/Arity-Args|LPList]):-
 	PH1 is PH,
 	P1 is P+PH1,
 	functor(H,Pred,Arity),
+	H=..[Pred|Args],
 	process_head_ground(T,P1,NT,LPList).
 
 /* setof must have a goal of the form B^G where B is a term containing the existential variables */

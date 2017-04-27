@@ -3089,7 +3089,7 @@ is_axiom(Pred) :-
 	member(Pred, [class,datatype,objectProperty,dataProperty,annotationProperty,namedIndividual,subClassOf,equivalentClasses,disjointClasses,disjointUnion,subPropertyOf,equivalentProperties,disjointProperties,
 inverseProperties,propertyDomain,propertyRange,functionalProperty,inverseFunctionalProperty,reflexiveProperty,irreflexiveProperty,symmetricProperty,asymmetricProperty,transitiveProperty,hasKey,
 sameIndividual,differentIndividuals,classAssertion,propertyAssertion,negativePropertyAssertion,annotationAssertion,
-lpClassAssertion,lpPropertyAssertion]).
+lpClassAssertion,lpPropertyAssertion,lpIndividuals]).
 
 :- multifile sandbox:safe_primitive/1.
 
