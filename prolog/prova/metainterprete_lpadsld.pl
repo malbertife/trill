@@ -692,7 +692,8 @@ parse(File):-
 	trill:add_kb_prefix('disponte','https://sites.google.com/a/unife.it/ml/disponte#'),
 	process_clauses(C,1,[]).
 
-process_clauses([(end_of_file,[])],_N,LPList):-!,	assert_lp_axioms(LPList).
+process_clauses([(end_of_file,[])],_N,LPList):-!,
+	assert_lp_axioms(LPList).
 
 process_clauses([(H,_V)|T],N,LPList):-
 	H =.. [kb_prefix,A,B],!,
@@ -815,10 +816,11 @@ assert_lp_axioms([P/2|T],I):- !,
 	owl2_model:create_and_assert_axioms(lpPropertyAssertion,[P]),
 	assert_lp_axioms(T,I).
 
-assert_lp_axioms([P/1-[A]|T],[A|I]):- !,
-	ground(A),
+assert_lp_axioms([P/1-[A]|T],I):-!, 
+	extract_ground([A],L1),
 	owl2_model:create_and_assert_axioms(lpClassAssertion,[P]),
-	assert_lp_axioms(T,I).
+	assert_lp_axioms(T,I0),
+	append(L1,I0,I).
 
 assert_lp_axioms([P/2-L|T],I):- !,
 	extract_ground(L,L1),
